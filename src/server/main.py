@@ -258,6 +258,14 @@ async def vault_test(service: str):
     return await vault.test(service)
 
 
+@app.post("/api/vault/hf/deploy-space")
+async def vault_hf_deploy_space(body: dict):
+    repo_id = (body.get("repo_id") or "").strip()
+    if not repo_id or "/" not in repo_id:
+        raise HTTPException(400, "repo_id must be 'username/space-name'")
+    return await vault.deploy_hf_space(repo_id)
+
+
 @app.post("/api/vault/github/create-repo")
 async def vault_github_create_repo(body: dict):
     name = (body.get("name") or "crane-shipped").strip()
@@ -318,10 +326,12 @@ async def clone_project(body: dict):
 
 
 @app.websocket("/ws/terminal")
-async def ws_terminal(ws: WebSocket):
-    if not origin_ok(ws) or WS.root is None:
+async def ws_terminal(ws: WebSocket, target: str = "local"):
+    if not origin_ok(ws):
         return await ws.close(code=1008)
-    await terminal.serve(ws, WS.root)
+    # GCP and NVIDIA terminals don't need an open project
+    cwd = WS.root if WS.root else Path.home()
+    await terminal.serve(ws, cwd, target=target)
 
 
 if STATIC.exists():

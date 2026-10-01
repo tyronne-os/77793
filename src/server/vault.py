@@ -37,6 +37,8 @@ _KEY_MAP: dict[str, str] = {
     "jev":         "JEV_API_KEY",
     "gemini":      "GEMINI_API_KEY",
     "openai":      "OPENAI_API_KEY",
+    "cfb":         "CFB_API_KEY",        # College Football Data API
+    "tank":        "TANK_API_KEY",       # Tank01 / sports stats API
 }
 
 _SERVICE_LABELS = {
@@ -48,6 +50,8 @@ _SERVICE_LABELS = {
     "jev":         "JEV",
     "gemini":      "Gemini",
     "openai":      "OpenAI",
+    "cfb":         "College Football API",
+    "tank":        "Tank API",
 }
 
 
@@ -152,6 +156,10 @@ async def test(service: str) -> dict:
             return await _test_gemini(token)
         if service == "openai":
             return await _test_openai(token)
+        if service == "cfb":
+            return await _test_cfb(token)
+        if service == "tank":
+            return await _test_tank(token)
     except httpx.ConnectError:
         return {"ok": False, "message": "Network error — check internet connection"}
     except Exception as e:
@@ -250,6 +258,78 @@ async def _test_openai(token: str) -> dict:
 
 
 # ── GitHub repo creation ───────────────────────────────────────────────────────
+
+async def _test_cfb(token: str) -> dict:
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.get("https://api.collegefootballdata.com/games",
+                        params={"year": "2024", "seasonType": "regular"},
+                        headers={"Authorization": f"Bearer {token}"})
+    if r.status_code == 200:
+        count = len(r.json()) if r.content else 0
+        return {"ok": True, "message": f"CFB API connected — {count} games in sample query"}
+    return {"ok": False, "message": f"CFB API returned {r.status_code}"}
+
+
+async def _test_tank(token: str) -> dict:
+    # Tank01 on RapidAPI — test with NFL endpoint
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.get("https://tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com/getNFLTeams",
+                        headers={"X-RapidAPI-Key": token,
+                                 "X-RapidAPI-Host": "tank01-nfl-live-in-game-real-time-statistics-nfl.p.rapidapi.com"})
+    if r.status_code == 200:
+        return {"ok": True, "message": "Tank API connected — NFL endpoint live"}
+    # Try alternate tank API endpoint formats
+    async with httpx.AsyncClient(timeout=10) as c:
+        r2 = await c.get("https://api.sportsdata.io/v3/nfl/scores/json/Teams",
+                         params={"key": token})
+    if r2.status_code == 200:
+        return {"ok": True, "message": "Tank/SportsData API connected"}
+    return {"ok": False, "message": f"Tank API returned {r.status_code} — check RapidAPI host or endpoint"}
+
+
+async def deploy_hf_space(repo_id: str) -> dict:
+    """Push hf_space/ to a HF Space repo using the stored HF token."""
+    import subprocess
+    token = retrieve("huggingface")
+    if not token:
+        return {"ok": False, "message": "Hugging Face token not stored"}
+
+    space_dir = Path("/mnt/elana/ai_apps/crane/hf_space")
+    if not space_dir.exists():
+        return {"ok": False, "message": "hf_space/ directory not found"}
+
+    # Use huggingface_hub CLI to upload
+    try:
+        r = await asyncio.to_thread(
+            subprocess.run,
+            ["python3", "-c",
+             f"""
+from huggingface_hub import HfApi
+api = HfApi(token="{token}")
+api.create_repo(repo_id="{repo_id}", repo_type="space", space_sdk="gradio", private=False, exist_ok=True)
+api.upload_folder(folder_path="{space_dir}", repo_id="{repo_id}", repo_type="space")
+print("ok")
+"""],
+            capture_output=True, text=True, timeout=120
+        )
+        if "ok" in r.stdout:
+            url = f"https://huggingface.co/spaces/{repo_id}"
+            # store the space URL as an env var for CRANE to use
+            store_space_url(repo_id)
+            return {"ok": True, "message": f"Deployed → {url}  Set CRANE_HF_MM_URL in vault or env to activate."}
+        return {"ok": False, "message": (r.stderr or r.stdout)[-400:]}
+    except Exception as e:
+        return {"ok": False, "message": str(e)[:200]}
+
+
+def store_space_url(repo_id: str) -> None:
+    """Persist the ZeroGPU Space URL so CRANE can use it as a fallback."""
+    space_url = f"https://{repo_id.replace('/', '-')}.hf.space"
+    data = _read_vault()
+    data["CRANE_HF_MM_URL"] = space_url
+    _write_vault(data)
+    os.environ["CRANE_HF_MM_URL"] = space_url
+
 
 async def create_github_repo(repo_name: str, description: str = "CRANE Builder IDE — internal") -> dict:
     """Create a private GitHub repo and push crane to it."""

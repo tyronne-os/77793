@@ -21,13 +21,32 @@ from openai import AsyncOpenAI
 
 from files import WS
 
-QWEN_URL = os.environ.get("CRANE_LLM_URL", "http://localhost:8010/v1")
-MM_URL   = os.environ.get("CRANE_MM_URL",  "http://localhost:8011/v1")
+QWEN_URL  = os.environ.get("CRANE_LLM_URL", "http://localhost:8010/v1")
+MM_URL    = os.environ.get("CRANE_MM_URL",  "http://localhost:8011/v1")
+NIM_URL   = "https://integrate.api.nvidia.com/v1"
+HF_MM_URL = os.environ.get("CRANE_HF_MM_URL", "")   # ZeroGPU Space fallback for MiniMax
 MAX_STEPS   = 20
 CMD_TIMEOUT = 120
 
 client = AsyncOpenAI(base_url=QWEN_URL, api_key="not-needed", timeout=600, max_retries=1)
 probe  = client.with_options(timeout=3, max_retries=0)
+
+# NVIDIA NIM fallback client — activated when local Qwen is offline
+def _nim_key() -> str | None:
+    return os.environ.get("NVIDIA_ENT_KEY") or os.environ.get("NGC_API_KEY")
+
+def _nim_client() -> AsyncOpenAI | None:
+    key = _nim_key()
+    if not key:
+        return None
+    return AsyncOpenAI(base_url=NIM_URL, api_key=key, timeout=300, max_retries=1)
+
+# Preferred NIM models in order (Qwen first if available on NIM, else Nemotron)
+_NIM_MODELS = [
+    "qwen/qwen2.5-coder-32b-instruct",
+    "nvidia/llama-3.1-nemotron-70b-instruct",
+    "meta/llama-3.1-70b-instruct",
+]
 
 # ── System prompts ─────────────────────────────────────────────────────────────
 
@@ -61,6 +80,18 @@ TOOLS  (emit exactly this format — no code fences around tool calls)
 run_command runs in the project root. Limit: {timeout}s. Use npm/node/python as needed.
 generate_image / generate_video call MiniMax H3 diffusion and save the file to the project. Always choose the output_path before calling. Images are rendered photorealistic by default — do NOT add "digital art", "illustration", "CGI" or similar in the prompt.
 clone_project clones a GitHub repo (uses git clone --depth=1) or mirrors any website (uses wget --mirror) into a new CRANE project. Call it when the user asks to "clone", "copy", or "scrape" a site or repo URL.
+────────────────────────────────────────────────────────────────────
+DEVELOPER RESOURCES (your active accounts — use these to save cost):
+• NVIDIA Developer perk — free NIM inference API at {nim_url}: run Qwen, Llama, Nemotron, Flux and other models with no GPU spin-up cost; use this for code tasks when berylize-node is paused
+• NVIDIA Enterprise perk — full NGC model catalog, container registry, enterprise support; auth key is NGC_API_KEY env var
+• Hugging Face Pro — unlimited HF Inference API, priority ZeroGPU, all Pro-gated models; HF_TOKEN env var
+• Google Cloud credits — $240 remaining, expire 2026-11-01: ALWAYS use GCP compute first for GPU tasks to burn down credits before they expire; berylize-node is g2-standard-4 (L4, $0.40/hr)
+• HF ZeroGPU Space — MiniMax H3 diffusion is deployed at a Hugging Face Space ({hf_mm_url or "not yet deployed"}): route heavy video batch jobs there instead of keeping berylize-node running; it's free GPU time
+SMART ROUTING GUIDANCE (follow this order for every generation task):
+  1. For CODE/shell tasks: if berylize-node is down, use NVIDIA NIM (free, instant, no billing)
+  2. For IMAGE generation: if berylize-node is down + HF Space is up, use ZeroGPU Space
+  3. For VIDEO batches (>3 clips): always route to ZeroGPU Space regardless of berylize-node state
+  4. For INTERACTIVE sessions requiring fast iteration: start berylize-node (uses GCP credits)
 ────────────────────────────────────────────────────────────────────
 """
 
@@ -226,19 +257,57 @@ async def exec_tool(name: str, args: dict) -> str:
 
 
 async def model_id() -> str | None:
+    """Return the active model ID — local Qwen or NIM fallback."""
     try:
         r = await probe.models.list()
-        return r.data[0].id if r.data else None
+        if r.data:
+            return r.data[0].id
     except Exception:
-        return None
+        pass
+    # local Qwen offline — check NIM
+    nim = _nim_client()
+    if nim:
+        try:
+            pr = nim.with_options(timeout=5, max_retries=0)
+            r2 = await pr.models.list()
+            if r2.data:
+                return f"NIM:{r2.data[0].id}"
+        except Exception:
+            pass
+    return None
+
+
+async def _get_active_client() -> tuple[AsyncOpenAI, str]:
+    """Return (client, model_id) — prefers local Qwen, falls back to NVIDIA NIM."""
+    try:
+        r = await probe.models.list()
+        if r.data:
+            return client, r.data[0].id
+    except Exception:
+        pass
+    nim = _nim_client()
+    if nim:
+        try:
+            pr = nim.with_options(timeout=5, max_retries=0)
+            r2 = await pr.models.list()
+            if r2.data:
+                available = {m.id for m in r2.data}
+                for preferred in _NIM_MODELS:
+                    if preferred in available:
+                        return nim, preferred
+                return nim, r2.data[0].id
+        except Exception:
+            pass
+    # last resort: return local client even if offline (will error gracefully)
+    return client, "qwen"
 
 
 async def handle(ws, history: list[dict], text: str, active_file: str | None,
                  mode: str = "auto") -> None:
     """One user turn: loop model ↔ tools until it stops calling tools."""
-    model = await model_id()
-    if model is None:
-        await ws.send_json({"type": "error", "message": f"Qwen unreachable at {QWEN_URL} — is the tunnel up? (run_crane.sh)"})
+    active_client, model = await _get_active_client()
+    if model == "qwen":   # both local and NIM failed
+        await ws.send_json({"type": "error", "message": f"No LLM available — Qwen at {QWEN_URL} offline and no NVIDIA NIM key configured. Add NGC_API_KEY or NVIDIA_ENT_KEY to the vault."})
         return
 
     tree = "\n".join(("  " * t["depth"]) + t["name"] + ("/" if t["dir"] else "") for t in WS.tree()) or "(empty project)"
@@ -251,8 +320,8 @@ async def handle(ws, history: list[dict], text: str, active_file: str | None,
 
     mode_block = _MODE_PLAN if mode == "plan" else _MODE_AUTO
     system = (_BASE + mode_block).format(
-        mm_url=MM_URL, timeout=CMD_TIMEOUT,
-        project=WS.root.name, tree=tree, active=active
+        mm_url=MM_URL, nim_url=NIM_URL, hf_mm_url=HF_MM_URL or "not yet deployed",
+        timeout=CMD_TIMEOUT, project=WS.root.name, tree=tree, active=active
     )
     history.append({"role": "user", "content": text})
 
@@ -260,7 +329,7 @@ async def handle(ws, history: list[dict], text: str, active_file: str | None,
         messages = [{"role": "system", "content": system}] + history[-32:]
         full = ""
         try:
-            stream = await client.chat.completions.create(
+            stream = await active_client.chat.completions.create(
                 model=model, messages=messages, stream=True,
                 temperature=0.25, max_tokens=8000)
             async for chunk in stream:

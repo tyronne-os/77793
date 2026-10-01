@@ -11,14 +11,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const SERVICES = [
-  { id: "huggingface", label: "Hugging Face",           icon: "🤗", placeholder: "hf_…",          hint: "Profile → Access Tokens → New token (write)" },
+  { id: "huggingface", label: "Hugging Face",           icon: "🤗", placeholder: "hf_…",          hint: "Profile → Access Tokens → New token (write) · Pro perks: ZeroGPU + unlimited inference" },
   { id: "github",      label: "GitHub",                  icon: "🐙", placeholder: "ghp_… or github_pat_…", hint: "Settings → Developer settings → PAT (classic)" },
-  { id: "nvidia_ngc",  label: "NVIDIA NGC",              icon: "⚡", placeholder: "NGC API key",   hint: "ngc.nvidia.com → Setup → Get API Key" },
-  { id: "nvidia_ent",  label: "NVIDIA Enterprise",       icon: "🖥", placeholder: "Enterprise key", hint: "NVIDIA Enterprise portal → API keys" },
-  { id: "gcp",         label: "Google Cloud (gcloud)",   icon: "☁️", placeholder: null,             hint: "Run: gcloud auth login  in the CRANE terminal" },
+  { id: "nvidia_ngc",  label: "NVIDIA NGC",              icon: "⚡", placeholder: "NGC API key",   hint: "ngc.nvidia.com → Setup → Get API Key · used as LLM fallback when GPU is paused" },
+  { id: "nvidia_ent",  label: "NVIDIA Enterprise",       icon: "🖥", placeholder: "Enterprise key", hint: "NVIDIA Enterprise portal → API keys · unlocks full NIM catalog" },
+  { id: "gcp",         label: "Google Cloud (gcloud)",   icon: "☁️", placeholder: null,             hint: "$240 credits expire 2026-11-01 — run: gcloud auth login  in the GCP terminal tab" },
   { id: "jev",         label: "JEV",                     icon: "🔑", placeholder: "••••••••",       hint: "Space secret — handled by the deployment pipeline" },
   { id: "gemini",      label: "Gemini",                  icon: "♊", placeholder: "AIza…",           hint: "aistudio.google.com → Get API key" },
   { id: "openai",      label: "OpenAI",                  icon: "🤖", placeholder: "sk-…",            hint: "platform.openai.com → API keys" },
+  { id: "cfb",         label: "College Football API",    icon: "🏈", placeholder: "CFB bearer token", hint: "collegefootballdata.com → Account → API key" },
+  { id: "tank",        label: "Tank API",                icon: "🎯", placeholder: "RapidAPI key",   hint: "rapidapi.com → Tank01 → Subscribe → App keys" },
 ] as const;
 
 type ServiceId = typeof SERVICES[number]["id"];
@@ -34,6 +36,9 @@ export default function VaultPanel({ open, onClose }: { open: boolean; onClose: 
   const [githubRepo, setGithubRepo] = useState("");
   const [repoResult, setRepoResult] = useState<{ ok: boolean; message: string; url?: string } | null>(null);
   const [creatingRepo, setCreatingRepo] = useState(false);
+  const [hfSpaceName, setHfSpaceName] = useState("");
+  const [hfSpaceResult, setHfSpaceResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [deployingSpace, setDeployingSpace] = useState(false);
 
   // Load which services are already configured
   const loadStatus = useCallback(async () => {
@@ -158,6 +163,33 @@ export default function VaultPanel({ open, onClose }: { open: boolean; onClose: 
                     )}
                     {st.configured && (
                       <button className="vault-btn del" onClick={() => remove(svc.id)} title="Remove token">✕</button>
+                    )}
+                  </div>
+                )}
+
+                {/* HF extra: deploy ZeroGPU Space */}
+                {svc.id === "huggingface" && st.configured && (
+                  <div className="vault-github-extra">
+                    <label>DEPLOY ZEROGPU SPACE (crane-gen) — free MiniMax H3 fallback</label>
+                    <div className="vault-repo-row">
+                      <input className="vault-input repo-name" placeholder="your-hf-username/crane-gen"
+                        value={hfSpaceName} onChange={e => setHfSpaceName(e.target.value)} />
+                      <button className="vault-btn save" disabled={deployingSpace || !hfSpaceName.trim()}
+                        onClick={async () => {
+                          setDeployingSpace(true); setHfSpaceResult(null);
+                          const r = await fetch("/api/vault/hf/deploy-space", {
+                            method: "POST", headers: { "content-type": "application/json" },
+                            body: JSON.stringify({ repo_id: hfSpaceName.trim() }),
+                          }).then(r => r.json()).catch(() => ({ ok: false, message: "Request failed" }));
+                          setHfSpaceResult(r); setDeployingSpace(false);
+                        }}>
+                        {deployingSpace ? "Deploying…" : "🚀 Deploy Space"}
+                      </button>
+                    </div>
+                    {hfSpaceResult && (
+                      <div className={`vault-msg ${hfSpaceResult.ok ? "ok" : "bad"}`}>
+                        {hfSpaceResult.message}
+                      </div>
                     )}
                   </div>
                 )}
