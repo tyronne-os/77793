@@ -20,6 +20,7 @@ import httpx
 from openai import AsyncOpenAI
 
 from files import WS
+import vault as _vault
 
 QWEN_URL  = os.environ.get("CRANE_LLM_URL", "http://localhost:8010/v1")
 MM_URL    = os.environ.get("CRANE_MM_URL",  "http://localhost:8011/v1")
@@ -306,6 +307,7 @@ async def handle(ws, history: list[dict], text: str, active_file: str | None,
                  mode: str = "auto") -> None:
     """One user turn: loop model ↔ tools until it stops calling tools."""
     active_client, model = await _get_active_client()
+    _using_nim = active_client is not client   # True when falling back to NVIDIA NIM
     if model == "qwen":   # both local and NIM failed
         await ws.send_json({"type": "error", "message": f"No LLM available — Qwen at {QWEN_URL} offline and no NVIDIA NIM key configured. Add NGC_API_KEY or NVIDIA_ENT_KEY to the vault."})
         return
@@ -344,6 +346,10 @@ async def handle(ws, history: list[dict], text: str, active_file: str | None,
             return
 
         history.append({"role": "assistant", "content": full})
+        # log NIM usage (tokens estimated at chars/4 since streaming doesn't give counts)
+        if _using_nim and full:
+            svc = "nvidia_ent" if os.environ.get("NVIDIA_ENT_KEY") else "nvidia_ngc"
+            _vault.log_usage(svc, "crane/chat", tokens=len(full) // 4, model=model)
         calls = CALL_RE.findall(full)
         if not calls:
             break

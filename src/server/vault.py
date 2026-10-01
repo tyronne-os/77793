@@ -17,8 +17,11 @@ Supported services:
 from __future__ import annotations
 
 import asyncio
+import datetime
+import json as _json
 import os
 import re
+import socket as _socket
 import stat
 import subprocess
 from pathlib import Path
@@ -39,6 +42,7 @@ _KEY_MAP: dict[str, str] = {
     "openai":      "OPENAI_API_KEY",
     "cfb":         "CFB_API_KEY",        # College Football Data API
     "tank":        "TANK_API_KEY",       # Tank01 / sports stats API
+    "hostinger":   "HOSTINGER_API_KEY",  # Hostinger email management API
 }
 
 _SERVICE_LABELS = {
@@ -52,6 +56,7 @@ _SERVICE_LABELS = {
     "openai":      "OpenAI",
     "cfb":         "College Football API",
     "tank":        "Tank API",
+    "hostinger":   "Hostinger",
 }
 
 
@@ -160,6 +165,8 @@ async def test(service: str) -> dict:
             return await _test_cfb(token)
         if service == "tank":
             return await _test_tank(token)
+        if service == "hostinger":
+            return await _test_hostinger(token)
     except httpx.ConnectError:
         return {"ok": False, "message": "Network error — check internet connection"}
     except Exception as e:
@@ -259,6 +266,20 @@ async def _test_openai(token: str) -> dict:
 
 # ── GitHub repo creation ───────────────────────────────────────────────────────
 
+async def _test_hostinger(token: str) -> dict:
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.get("https://api.hostinger.com/v1/profile",
+                        headers={"Authorization": f"Bearer {token}",
+                                 "Accept": "application/json"})
+    if r.status_code == 200:
+        info = r.json()
+        email = info.get("data", {}).get("email") or info.get("email", "")
+        return {"ok": True, "message": f"Hostinger connected — {email or 'authenticated'}"}
+    if r.status_code == 401:
+        return {"ok": False, "message": "Hostinger: invalid API token"}
+    return {"ok": False, "message": f"Hostinger returned {r.status_code}"}
+
+
 async def _test_cfb(token: str) -> dict:
     async with httpx.AsyncClient(timeout=10) as c:
         r = await c.get("https://api.collegefootballdata.com/games",
@@ -285,6 +306,65 @@ async def _test_tank(token: str) -> dict:
     if r2.status_code == 200:
         return {"ok": True, "message": "Tank/SportsData API connected"}
     return {"ok": False, "message": f"Tank API returned {r.status_code} — check RapidAPI host or endpoint"}
+
+
+# ── usage logging ─────────────────────────────────────────────────────────────
+
+USAGE_LOG = Path.home() / ".crane_usage.json"
+
+def log_usage(service: str, caller: str, tokens: int = 0,
+              cost_usd: float = 0.0, model: str = "", note: str = "") -> None:
+    """Append one usage record. Never raises — fire-and-forget."""
+    entry = {
+        "ts": datetime.datetime.utcnow().isoformat() + "Z",
+        "service": service,
+        "caller": caller,          # e.g. "crane/chat", "crane/nim", "vault/test"
+        "device": _socket.gethostname(),
+        "tokens": tokens,
+        "cost_usd": round(cost_usd, 6),
+        "model": model,
+        "note": note,
+    }
+    try:
+        data: list = _json.loads(USAGE_LOG.read_text()) if USAGE_LOG.exists() else []
+        data.append(entry)
+        if len(data) > 2000:
+            data = data[-2000:]
+        USAGE_LOG.write_text(_json.dumps(data))
+        USAGE_LOG.chmod(0o600)
+    except Exception:
+        pass
+
+
+def get_usage(last: int = 200) -> list[dict]:
+    try:
+        return (_json.loads(USAGE_LOG.read_text()) if USAGE_LOG.exists() else [])[-last:]
+    except Exception:
+        return []
+
+
+def usage_summary() -> dict[str, dict]:
+    """Per-service rollup: last_used, last_caller, last_device, last_model,
+    total_calls, total_tokens, total_cost_usd."""
+    entries = get_usage(2000)
+    result: dict[str, dict] = {}
+    for e in entries:
+        svc = e.get("service", "unknown")
+        if svc not in result:
+            result[svc] = {
+                "last_used": None, "last_caller": "", "last_device": "",
+                "last_model": "", "total_calls": 0, "total_tokens": 0, "total_cost_usd": 0.0,
+            }
+        s = result[svc]
+        s["total_calls"] += 1
+        s["total_tokens"] += e.get("tokens", 0)
+        s["total_cost_usd"] = round(s["total_cost_usd"] + e.get("cost_usd", 0.0), 6)
+        if e.get("ts") and (not s["last_used"] or e["ts"] > s["last_used"]):
+            s["last_used"] = e["ts"]
+            s["last_caller"] = e.get("caller", "")
+            s["last_device"] = e.get("device", "")
+            s["last_model"] = e.get("model", "")
+    return result
 
 
 async def deploy_hf_space(repo_id: str) -> dict:
@@ -387,3 +467,35 @@ async def create_github_repo(repo_name: str, description: str = "CRANE Builder I
     repo_url = f"https://github.com/{login}/{repo_name}"
     verb = "already existed, pushed to" if already else "created and pushed to"
     return {"ok": True, "message": f"Repo {verb}: {repo_url}", "url": repo_url, "login": login}
+
+
+async def list_github_repos(per_page: int = 100, page: int = 1) -> dict:
+    """List the authenticated user's GitHub repos (for Codex-style picker)."""
+    token = retrieve("github")
+    if not token:
+        return {"ok": False, "message": "GitHub token not stored", "repos": []}
+
+    async with httpx.AsyncClient(timeout=15) as c:
+        r = await c.get(
+            "https://api.github.com/user/repos",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
+            params={"per_page": per_page, "page": page, "sort": "updated", "affiliation": "owner,collaborator"},
+        )
+    if r.status_code != 200:
+        return {"ok": False, "message": f"GitHub API {r.status_code}", "repos": []}
+
+    repos = [
+        {
+            "full_name": repo["full_name"],
+            "name":      repo["name"],
+            "private":   repo["private"],
+            "language":  repo.get("language") or "",
+            "description": (repo.get("description") or "")[:120],
+            "updated_at": repo.get("updated_at", ""),
+            "html_url":  repo["html_url"],
+            "clone_url": repo["clone_url"],
+            "stars":     repo.get("stargazers_count", 0),
+        }
+        for repo in r.json()
+    ]
+    return {"ok": True, "repos": repos, "page": page}

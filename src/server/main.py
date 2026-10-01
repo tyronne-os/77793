@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 import chat
 import gpu
+import podman as _podman
 import process
 import terminal
 import vault
@@ -266,6 +267,77 @@ async def vault_hf_deploy_space(body: dict):
     return await vault.deploy_hf_space(repo_id)
 
 
+@app.get("/api/services/status")
+async def services_status():
+    """Check which AI service ports are open (8010 Qwen, 8011 MiniMax, 8012 Kokoro)."""
+    import socket as _sock
+    result: dict[str, bool | None] = {}
+    for name, port in [("qwen", 8010), ("minimax", 8011), ("kokoro", 8012)]:
+        try:
+            s = _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM)
+            s.settimeout(0.8)
+            result[name] = s.connect_ex(("127.0.0.1", port)) == 0
+            s.close()
+        except Exception:
+            result[name] = False
+    return result
+
+
+@app.post("/api/services/hermes")
+async def launch_hermes(body: dict):
+    """Launch Hermes: mode=desktop|chat|full (full runs run_crane.sh headlessly)."""
+    import subprocess
+    mode = (body.get("mode") or "desktop").strip()
+    if mode == "full":
+        cmd = ["bash", "/mnt/elana/ai_apps/crane/run_crane.sh"]
+    else:
+        cmd = ["hermes", mode]
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd, start_new_session=True,
+            stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+        )
+        vault.log_usage("hermes", f"crane/backend:{mode}", note=f"launched {' '.join(cmd)}")
+        return {"ok": True, "pid": proc.pid, "mode": mode}
+    except FileNotFoundError:
+        return {"ok": False, "message": f"Command not found: {cmd[0]}"}
+    except Exception as e:
+        return {"ok": False, "message": str(e)[:200]}
+
+
+@app.post("/api/services/kokoro/tts")
+async def kokoro_tts(body: dict):
+    """Send text to Kokoro TTS on port 8012 and return base64 audio."""
+    import base64
+    import httpx as _httpx
+    text = (body.get("text") or "").strip()
+    if not text:
+        raise HTTPException(400, "text required")
+    try:
+        async with _httpx.AsyncClient(timeout=30) as c:
+            r = await c.post("http://127.0.0.1:8012/v1/audio/speech",
+                             json={"model": "kokoro", "input": text, "voice": "af_bella"})
+        if r.status_code == 200:
+            vault.log_usage("kokoro", "crane/backend:voice_test", tokens=len(text.split()))
+            return {"ok": True, "audio_b64": base64.b64encode(r.content).decode(),
+                    "content_type": r.headers.get("content-type", "audio/wav")}
+        return {"ok": False, "message": f"Kokoro {r.status_code}: {r.text[:200]}"}
+    except Exception as e:
+        return {"ok": False, "message": f"Kokoro not reachable: {e}"}
+
+
+@app.get("/api/vault/usage")
+def vault_usage_report():
+    """Usage log — last 50 events plus per-service summary."""
+    return {"summary": vault.usage_summary(), "recent": vault.get_usage(50)}
+
+
+@app.get("/api/vault/github/repos")
+async def vault_github_repos(page: int = 1):
+    """List user's GitHub repos for the Codex-style repo picker."""
+    return await vault.list_github_repos(per_page=100, page=page)
+
+
 @app.post("/api/vault/github/create-repo")
 async def vault_github_create_repo(body: dict):
     name = (body.get("name") or "crane-shipped").strip()
@@ -323,6 +395,110 @@ async def clone_project(body: dict):
         raise HTTPException(500, (r.stderr or r.stdout)[-400:].strip())
 
     return {"ok": True, "name": name, "tree": WS.tree() if WS.root == dest else []}
+
+
+# ── Podman / Docker endpoints ──────────────────────────────────────────────────
+
+@app.get("/api/podman/status")
+async def podman_status():
+    return await _podman.status()
+
+
+@app.get("/api/podman/containers")
+async def podman_containers(all: bool = True):
+    return await _podman.list_containers(all_=all)
+
+
+@app.post("/api/podman/containers/{cid}/{action}")
+async def podman_container_action(cid: str, action: str):
+    if action not in ("start", "stop", "restart", "kill", "remove", "pause", "unpause"):
+        raise HTTPException(400, f"unknown action: {action}")
+    return await _podman.container_action(cid, action)
+
+
+@app.get("/api/podman/containers/{cid}/logs")
+async def podman_container_logs(cid: str, tail: int = 80):
+    return await _podman.container_logs(cid, tail=tail)
+
+
+@app.get("/api/podman/containers/stats")
+async def podman_container_stats():
+    return await _podman.container_stats()
+
+
+@app.get("/api/podman/images")
+async def podman_images():
+    return await _podman.list_images()
+
+
+@app.post("/api/podman/images/pull")
+async def podman_pull(body: dict):
+    image = (body.get("image") or "").strip()
+    if not image:
+        raise HTTPException(400, "image required")
+    return await _podman.pull_image(image)
+
+
+@app.delete("/api/podman/images/{image_id}")
+async def podman_remove_image(image_id: str, force: bool = False):
+    return await _podman.remove_image(image_id, force=force)
+
+
+@app.get("/api/podman/pods")
+async def podman_pods():
+    return await _podman.list_pods()
+
+
+@app.post("/api/podman/pods/{pod_id}/{action}")
+async def podman_pod_action(pod_id: str, action: str):
+    if action not in ("start", "stop", "restart", "remove"):
+        raise HTTPException(400, f"unknown action: {action}")
+    return await _podman.pod_action(pod_id, action)
+
+
+@app.get("/api/podman/volumes")
+async def podman_volumes():
+    return await _podman.list_volumes()
+
+
+@app.delete("/api/podman/volumes/{name}")
+async def podman_volume_remove(name: str):
+    return await _podman.volume_action(name, "remove")
+
+
+@app.get("/api/podman/networks")
+async def podman_networks():
+    return await _podman.list_networks()
+
+
+@app.post("/api/podman/containers/{cid}/systemd")
+async def podman_systemd(cid: str, new_: bool = False):
+    return await _podman.generate_systemd(cid, new_=new_)
+
+
+@app.post("/api/podman/run")
+async def podman_run(body: dict):
+    return await _podman.run_container(
+        image=body.get("image", ""),
+        name=body.get("name", ""),
+        ports=body.get("ports", ""),
+        env=body.get("env", ""),
+        volumes=body.get("volumes", ""),
+        detach=body.get("detach", True),
+        remove=body.get("remove", False),
+        cmd=body.get("cmd", ""),
+    )
+
+
+@app.post("/api/podman/convert")
+async def podman_convert(body: dict):
+    path = (body.get("path") or "").strip()
+    if not path:
+        if WS.root:
+            path = str(WS.root)
+        else:
+            raise HTTPException(400, "path required (or open a project)")
+    return await _podman.convert_project(path)
 
 
 @app.websocket("/ws/terminal")

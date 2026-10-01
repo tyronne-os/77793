@@ -8,7 +8,7 @@
  * GCP doesn't use a token — it uses gcloud CLI auth from the terminal.
  * GitHub has an extra "Create CRANE SHIPPED repo" action.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const SERVICES = [
   { id: "huggingface", label: "Hugging Face",           icon: "🤗", placeholder: "hf_…",          hint: "Profile → Access Tokens → New token (write) · Pro perks: ZeroGPU + unlimited inference" },
@@ -21,12 +21,33 @@ const SERVICES = [
   { id: "openai",      label: "OpenAI",                  icon: "🤖", placeholder: "sk-…",            hint: "platform.openai.com → API keys" },
   { id: "cfb",         label: "College Football API",    icon: "🏈", placeholder: "CFB bearer token", hint: "collegefootballdata.com → Account → API key" },
   { id: "tank",        label: "Tank API",                icon: "🎯", placeholder: "RapidAPI key",   hint: "rapidapi.com → Tank01 → Subscribe → App keys" },
+  { id: "hostinger",  label: "Hostinger",               icon: "📧", placeholder: "Hostinger API token", hint: "hpanel.hostinger.com → Account → API tokens — for email management agent" },
 ] as const;
 
 type ServiceId = typeof SERVICES[number]["id"];
 type ServiceStatus = { configured: boolean; testing: boolean; ok?: boolean; message?: string };
 
 export default function VaultPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [tab, setTab] = useState<"tokens" | "usage">("tokens");
+  const [usageSummary, setUsageSummary] = useState<Record<string, {
+    last_used: string | null; last_caller: string; last_device: string; last_model: string;
+    total_calls: number; total_tokens: number; total_cost_usd: number;
+  }>>({});
+  const [recentUsage, setRecentUsage] = useState<Array<{
+    ts: string; service: string; caller: string; device: string; tokens: number; model: string; note: string;
+  }>>([]);
+  const [usageLoading, setUsageLoading] = useState(false);
+
+  const loadUsage = useCallback(async () => {
+    setUsageLoading(true);
+    const data = await fetch("/api/vault/usage").then(r => r.json()).catch(() => ({ summary: {}, recent: [] }));
+    setUsageSummary(data.summary ?? {});
+    setRecentUsage(data.recent ?? []);
+    setUsageLoading(false);
+  }, []);
+
+  useEffect(() => { if (open && tab === "usage") loadUsage(); }, [open, tab, loadUsage]);
+
   const [statuses, setStatuses] = useState<Record<ServiceId, ServiceStatus>>(() =>
     Object.fromEntries(SERVICES.map(s => [s.id, { configured: false, testing: false }])) as Record<ServiceId, ServiceStatus>
   );
@@ -111,7 +132,75 @@ export default function VaultPanel({ open, onClose }: { open: boolean; onClose: 
         <button className="vault-close" onClick={onClose}>×</button>
       </div>
 
+      {/* tab bar */}
+      <div className="vault-tabs">
+        <button className={`vault-tab ${tab === "tokens" ? "on" : ""}`} onClick={() => setTab("tokens")}>TOKENS</button>
+        <button className={`vault-tab ${tab === "usage" ? "on" : ""}`} onClick={() => { setTab("usage"); loadUsage(); }}>USAGE REPORT</button>
+      </div>
+
       <div className="vault-body">
+        {tab === "usage" ? (
+          <div className="vault-usage">
+            <div className="vu-toolbar">
+              <span className="vu-title">API Usage — tracked by CRANE on this device</span>
+              <button className="vault-btn test" disabled={usageLoading} onClick={loadUsage}>{usageLoading ? "Refreshing…" : "↺ Refresh"}</button>
+            </div>
+            {Object.keys(usageSummary).length === 0 && !usageLoading && (
+              <div className="vu-empty">No usage recorded yet — usage is logged when CRANE calls an API on your behalf.</div>
+            )}
+            {Object.keys(usageSummary).length > 0 && (
+              <table className="vu-table">
+                <thead><tr>
+                  <th>Service</th><th>Last Used</th><th>Program</th><th>Device</th><th>Calls</th><th>Tokens</th><th>Model</th>
+                </tr></thead>
+                <tbody>
+                  {Object.entries(usageSummary).map(([svc, s]) => {
+                    const label = SERVICES.find(x => x.id === svc)?.label ?? svc;
+                    const lastUTC = s.last_used ? new Date(s.last_used) : null;
+                    const lastStr = lastUTC ? lastUTC.toLocaleString() : "—";
+                    return (
+                      <tr key={svc}>
+                        <td><span className="vu-svc">{label}</span></td>
+                        <td className="vu-mono">{lastStr}</td>
+                        <td><span className="vu-caller">{s.last_caller || "—"}</span></td>
+                        <td className="vu-mono">{s.last_device || "—"}</td>
+                        <td className="vu-num">{s.total_calls}</td>
+                        <td className="vu-num">{s.total_tokens > 0 ? s.total_tokens.toLocaleString() : "—"}</td>
+                        <td className="vu-mono vu-model">{s.last_model ? s.last_model.split("/").pop() : "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+
+            {recentUsage.length > 0 && (
+              <>
+                <div className="vu-section-title">Recent Activity (last 50)</div>
+                <table className="vu-table vu-recent">
+                  <thead><tr>
+                    <th>Time</th><th>Service</th><th>Program</th><th>Device</th><th>Tokens</th><th>Model</th>
+                  </tr></thead>
+                  <tbody>
+                    {[...recentUsage].reverse().map((e, i) => {
+                      const label = SERVICES.find(x => x.id === e.service)?.label ?? e.service;
+                      return (
+                        <tr key={i}>
+                          <td className="vu-mono">{new Date(e.ts).toLocaleString()}</td>
+                          <td><span className="vu-svc">{label}</span></td>
+                          <td><span className="vu-caller">{e.caller}</span></td>
+                          <td className="vu-mono">{e.device}</td>
+                          <td className="vu-num">{e.tokens > 0 ? e.tokens.toLocaleString() : "—"}</td>
+                          <td className="vu-mono vu-model">{e.model ? e.model.split("/").pop() : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
+        ) : (
         <div className="vault-grid">
           {SERVICES.map(svc => {
             const st = statuses[svc.id];
@@ -217,6 +306,7 @@ export default function VaultPanel({ open, onClose }: { open: boolean; onClose: 
             );
           })}
         </div>
+        )}
       </div>
     </div>
   );
