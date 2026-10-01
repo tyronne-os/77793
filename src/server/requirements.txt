@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+watchdog
+ptyprocess
+openai
+httpx
