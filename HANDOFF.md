@@ -135,3 +135,15 @@ bash /mnt/elana/ai_apps/crane/run_crane.sh
 ```
 
 Then open http://localhost:8000 in a browser.
+
+---
+
+## Update — 2026-10-02
+
+- Repo renamed to **tyronne-os/CRANE-IT** on GitHub: https://github.com/tyronne-os/CRANE-IT
+- Local path: `/mnt/elana/ai_apps/crane`
+- Reference folder: `~/Downloads/CRANE IT`
+- All Phase 1 features committed and pushed
+- Podman panel, server podman routes, and `podman-workstation/` added
+- CRANE IDE confirmed running at `http://localhost:8000`
+- GPU offline (berylize-node not tunneled) — run `run_crane.sh` to activate
