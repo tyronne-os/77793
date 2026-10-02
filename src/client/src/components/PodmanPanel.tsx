@@ -17,7 +17,7 @@ const PM = {
   warn:    "#f08a3a",
 };
 
-type Tab = "containers" | "images" | "pods" | "volumes" | "networks" | "run" | "convert" | "stats";
+type Tab = "containers" | "images" | "pods" | "volumes" | "networks" | "run" | "convert" | "stats" | "workstation";
 
 type Container = { id: string; name: string; image: string; status: string; state: string; ports: string };
 type Image     = { id: string; name: string; size: number; created: string };
@@ -106,6 +106,76 @@ export default function PodmanPanel({ open, onClose }: { open: boolean; onClose:
   // convert
   const [convertResult, setConvertResult] = useState<{ ok: boolean; changes: { file: string; action: string }[]; suggestions: string[]; message: string } | null>(null);
 
+  // workstation
+  type WsService = { label: string; port: number; url: string; profile: string; state: string; running: boolean };
+  const [wsServices, setWsServices] = useState<Record<string, WsService>>({});
+  const [wsModels, setWsModels] = useState<{ name: string; id: string; size: string }[]>([]);
+  const [wsLoading, setWsLoading] = useState(false);
+  const [wsPullModel, setWsPullModel] = useState("phi3:mini");
+  const [wsOutput, setWsOutput] = useState("");
+  const [wsBusy, setWsBusy] = useState<string | null>(null);
+
+  const loadWorkstation = useCallback(async () => {
+    setWsLoading(true);
+    try {
+      const s = await fetch("/api/workstation/status").then(r => r.json());
+      if (s.ok) setWsServices(s.services ?? {});
+      const m = await fetch("/api/workstation/models").then(r => r.json());
+      if (m.ok) setWsModels(m.models ?? []);
+    } catch { /* swallow */ }
+    setWsLoading(false);
+  }, []);
+
+  const wsAction = async (profile: string) => {
+    setWsBusy(profile); setWsOutput("");
+    try {
+      const r = await fetch("/api/workstation/start", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ profile }),
+      }).then(r => r.json());
+      setWsOutput(r.output || (r.ok ? "Started" : r.message || "Error"));
+      await loadWorkstation();
+    } catch (e) { setWsOutput(String(e)); }
+    setWsBusy(null);
+  };
+
+  const wsStop = async () => {
+    setWsBusy("stop"); setWsOutput("");
+    try {
+      const r = await fetch("/api/workstation/stop", { method: "POST" }).then(r => r.json());
+      setWsOutput(r.output || "Stopped");
+      await loadWorkstation();
+    } catch (e) { setWsOutput(String(e)); }
+    setWsBusy(null);
+  };
+
+  const wsPull = async () => {
+    if (!wsPullModel.trim()) return;
+    setWsBusy("pull"); setWsOutput(`Pulling ${wsPullModel}...`);
+    try {
+      const r = await fetch("/api/workstation/pull", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: wsPullModel }),
+      }).then(r => r.json());
+      setWsOutput(r.output || (r.ok ? `✓ ${wsPullModel} ready` : r.message || "Error"));
+      await loadWorkstation();
+    } catch (e) { setWsOutput(String(e)); }
+    setWsBusy(null);
+  };
+
+  const wsBuildLab = async () => {
+    setWsBusy("build"); setWsOutput("Building crane-lab image (~5min)...");
+    try {
+      const r = await fetch("/api/workstation/build", { method: "POST" }).then(r => r.json());
+      setWsOutput(r.output || (r.ok ? "Build complete" : r.message || "Error"));
+    } catch (e) { setWsOutput(String(e)); }
+    setWsBusy(null);
+  };
+
+  useEffect(() => {
+    if (open && tab === "workstation") loadWorkstation();
+  }, [open, tab, loadWorkstation]);
+
   // pull
   const [pullImage, setPullImage] = useState("");
   const [pullOutput, setPullOutput] = useState("");
@@ -173,14 +243,15 @@ export default function PodmanPanel({ open, onClose }: { open: boolean; onClose:
   if (!open) return null;
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: "containers", label: "CONTAINERS" },
-    { id: "images",     label: "IMAGES"     },
-    { id: "pods",       label: "PODS"       },
-    { id: "volumes",    label: "VOLUMES"    },
-    { id: "networks",   label: "NETWORKS"   },
-    { id: "stats",      label: "STATS"      },
-    { id: "run",        label: "RUN"        },
-    { id: "convert",    label: "CONVERT"    },
+    { id: "workstation", label: "⚡ WORKSTATION" },
+    { id: "containers",  label: "CONTAINERS"     },
+    { id: "images",      label: "IMAGES"         },
+    { id: "pods",        label: "PODS"           },
+    { id: "volumes",     label: "VOLUMES"        },
+    { id: "networks",    label: "NETWORKS"       },
+    { id: "stats",       label: "STATS"          },
+    { id: "run",         label: "RUN"            },
+    { id: "convert",     label: "CONVERT"        },
   ];
 
   const stateColor = (state: string) => {
@@ -449,6 +520,127 @@ export default function PodmanPanel({ open, onClose }: { open: boolean; onClose:
           )}
 
           {/* CONVERT */}
+          {tab === "workstation" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 780 }}>
+
+              {/* Header row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ font: "700 12px var(--sans)", color: PM.gold, letterSpacing: ".08em" }}>LLM WORKSTATION</span>
+                <span style={{ font: "11px var(--sans)", color: PM.mute }}>— Jupyter · Ollama · Open WebUI · n8n</span>
+                <button onClick={loadWorkstation} disabled={wsLoading} style={{ marginLeft: "auto", background: "none", border: 0, color: PM.mute, cursor: "pointer", fontSize: 14 }}>↺</button>
+              </div>
+
+              {/* Service cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {Object.entries(wsServices).map(([name, svc]) => (
+                  <div key={name} style={{ background: PM.panel2, border: `1px solid ${svc.running ? "#1a4035" : PM.line}`, borderRadius: 8, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Dot ok={svc.running} />
+                      <span style={{ font: "700 11px var(--sans)", color: svc.running ? PM.ok : PM.text }}>{svc.label}</span>
+                      <span style={{ marginLeft: "auto", font: "10px var(--mono)", color: PM.mute }}>:{svc.port}</span>
+                    </div>
+                    {svc.running && (
+                      <a href={svc.url} target="_blank" rel="noreferrer" style={{ font: "10px var(--mono)", color: PM.gold, textDecoration: "none" }}>{svc.url}</a>
+                    )}
+                    <div style={{ font: "10px var(--sans)", color: PM.mute, textTransform: "uppercase" as const, letterSpacing: ".08em" }}>{svc.state}</div>
+                  </div>
+                ))}
+                {Object.keys(wsServices).length === 0 && (
+                  <div style={{ gridColumn: "1/-1", font: "12px var(--sans)", color: PM.mute, padding: "12px 0" }}>
+                    {wsLoading ? "Loading..." : "No workstation containers running — start a profile below."}
+                  </div>
+                )}
+              </div>
+
+              {/* Launch profiles */}
+              <Section title="Launch Profile">
+                <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                  <Btn label={wsBusy === "lab" ? "Starting…" : "🧪 LAB  (Jupyter)"} style="gold" disabled={!!wsBusy} onClick={() => wsAction("lab")}
+                    title="Jupyter Lab + transformers + langchain + gradio → :8888" />
+                  <Btn label={wsBusy === "serve" ? "Starting…" : "🤖 SERVE  (Ollama + WebUI)"} style="ok" disabled={!!wsBusy} onClick={() => wsAction("serve")}
+                    title="Ollama model server + Open WebUI → :11434 / :3000" />
+                  <Btn label={wsBusy === "full" ? "Starting…" : "⚡ FULL  (All)"} style="warn" disabled={!!wsBusy} onClick={() => wsAction("full")}
+                    title="Jupyter + Ollama + Open WebUI at once" />
+                  <Btn label={wsBusy === "pipeline" ? "Starting…" : "🔀 PIPELINE  (n8n)"} style="mute" disabled={!!wsBusy} onClick={() => wsAction("pipeline")}
+                    title="n8n workflow automation → :5678" />
+                  <Btn label={wsBusy === "stop" ? "Stopping…" : "■ STOP ALL"} style="bad" disabled={!!wsBusy} onClick={wsStop} />
+                </div>
+              </Section>
+
+              {/* Model manager */}
+              <Section title="Ollama Models">
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" as const }}>
+                  <select value={wsPullModel} onChange={e => setWsPullModel(e.target.value)}
+                    style={{ background: PM.panel2, border: `1px solid ${PM.line}`, color: PM.text, borderRadius: 6, padding: "4px 8px", font: "11px var(--mono)", flex: "0 0 auto", minWidth: 160 }}>
+                    <option value="phi3:mini">phi3:mini — 2.3 GB (best small)</option>
+                    <option value="qwen2:0.5b">qwen2:0.5b — 394 MB (fastest)</option>
+                    <option value="tinyllama">tinyllama — 637 MB (tiny)</option>
+                    <option value="deepseek-coder:1.3b">deepseek-coder:1.3b — 776 MB (code)</option>
+                    <option value="mistral:7b-instruct-q4_0">mistral:7b-q4 — 4.1 GB (best quality)</option>
+                    <option value="codellama:7b-code-q4_K_M">codellama:7b-q4 — 3.8 GB (code)</option>
+                    <option value="llama3.2:1b">llama3.2:1b — 1.3 GB (Meta)</option>
+                  </select>
+                  <input value={wsPullModel} onChange={e => setWsPullModel(e.target.value)} placeholder="or type any model:tag"
+                    style={{ background: PM.panel2, border: `1px solid ${PM.line}`, color: PM.text, borderRadius: 6, padding: "4px 8px", font: "11px var(--mono)", flex: 1, minWidth: 140 }} />
+                  <Btn label={wsBusy === "pull" ? "Pulling…" : "⬇ Pull"} style="gold" disabled={!!wsBusy || !wsPullModel.trim()} onClick={wsPull} />
+                </div>
+                {wsModels.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {wsModels.map(m => (
+                      <div key={m.name} style={{ display: "flex", gap: 10, font: "11px var(--mono)", padding: "5px 8px", background: PM.panel2, borderRadius: 6, border: `1px solid ${PM.line}` }}>
+                        <span style={{ color: PM.ok }}>✓</span>
+                        <span style={{ color: PM.text, flex: 1 }}>{m.name}</span>
+                        <span style={{ color: PM.mute }}>{m.size}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Section>
+
+              {/* Build lab image */}
+              <Section title="Lab Image">
+                <div style={{ font: "12px var(--sans)", color: PM.mute, lineHeight: 1.6 }}>
+                  The <code style={{ color: PM.gold }}>crane-lab</code> image includes PyTorch (CPU), transformers, LangChain, LlamaIndex, Gradio, and Jupyter. Build once (~5 min), runs forever.
+                </div>
+                <Btn label={wsBusy === "build" ? "Building…" : "🔨 Build Lab Image"} style="gold" disabled={!!wsBusy} onClick={wsBuildLab} />
+              </Section>
+
+              {/* Output console */}
+              {wsOutput && (
+                <div style={{ background: "#080410", border: `1px solid ${PM.line}`, borderRadius: 8, padding: "10px 12px" }}>
+                  <pre style={{ margin: 0, font: "11px/1.5 var(--mono)", color: PM.text, whiteSpace: "pre-wrap", maxHeight: 260, overflowY: "auto" }}>{wsOutput}</pre>
+                </div>
+              )}
+
+              {/* Quick-ref model table */}
+              <Section title="CPU-Friendly Models for This Laptop">
+                <table style={{ width: "100%", borderCollapse: "collapse" as const, font: "11px var(--mono)" }}>
+                  <thead>
+                    <tr style={{ color: PM.mute, borderBottom: `1px solid ${PM.line}` }}>
+                      {["Model", "Size", "Best For"].map(h => <th key={h} style={{ textAlign: "left" as const, padding: "4px 8px", fontWeight: 700 }}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      ["phi3:mini",            "2.3 GB", "General chat, reasoning, code"],
+                      ["qwen2:0.5b",           "394 MB", "Fastest possible, ultra-light"],
+                      ["tinyllama",            "637 MB", "Testing pipelines, low RAM"],
+                      ["deepseek-coder:1.3b",  "776 MB", "Code gen, debugging"],
+                      ["llama3.2:1b",          "1.3 GB", "Meta Llama, balanced"],
+                      ["mistral:7b-q4",        "4.1 GB", "Best quality, needs 8GB RAM"],
+                    ].map(([m, s, d]) => (
+                      <tr key={m} style={{ borderBottom: `1px solid ${PM.line}20` }}>
+                        <td style={{ padding: "5px 8px", color: PM.gold }}>{m}</td>
+                        <td style={{ padding: "5px 8px", color: PM.text }}>{s}</td>
+                        <td style={{ padding: "5px 8px", color: PM.mute }}>{d}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Section>
+            </div>
+          )}
+
           {!loading && tab === "convert" && (
             <div style={{ maxWidth: 700, display: "flex", flexDirection: "column", gap: 14 }}>
               <Section title="Docker → Podman Conversion">

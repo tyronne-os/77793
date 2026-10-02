@@ -1,0 +1,122 @@
+version: "3.8"
+
+# CRANE LLM Workstation
+# Storage root: /mnt/elana/ai_apps/podman-storage (ZFS-safe via fuse-overlayfs)
+# Model cache: /mnt/elana/ai_apps/crane/podman-workstation/data/
+#
+# Tiers:
+#   make lab     → Jupyter + full ML stack (notebooks, transformers, langchain)
+#   make serve   → Ollama model server + Open WebUI chat
+#   make full    → Everything
+#   make pull MODEL=phi3:mini  → Pull a model
+
+networks:
+  llm-net:
+    driver: bridge
+
+volumes:
+  ollama-models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/ollama
+
+  jupyter-work:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/workspace
+
+  webui-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/webui
+
+services:
+
+  # ── LAB: Jupyter + full Python ML stack ──────────────────────────────────────
+  lab:
+    build:
+      context: ./containers/lab
+      dockerfile: Dockerfile
+    image: crane-lab:latest
+    container_name: crane-lab
+    hostname: lab
+    restart: unless-stopped
+    ports:
+      - "8888:8888"   # Jupyter Lab
+      - "7860:7860"   # Gradio apps
+      - "8080:8080"   # FastAPI dev server
+    volumes:
+      - jupyter-work:/workspace
+      - ${HF_CACHE:-./data/hf-cache}:/root/.cache/huggingface
+    environment:
+      - HF_HOME=/root/.cache/huggingface
+      - TRANSFORMERS_CACHE=/root/.cache/huggingface/hub
+      - OLLAMA_HOST=http://ollama:11434
+      - PYTHONUNBUFFERED=1
+    networks:
+      - llm-net
+    profiles: ["lab", "full"]
+
+  # ── OLLAMA: Local model server (CPU-optimized) ───────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: crane-ollama
+    hostname: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    environment:
+      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_KEEP_ALIVE=5m
+    networks:
+      - llm-net
+    profiles: ["serve", "full"]
+
+  # ── OPEN WEBUI: Chat interface ───────────────────────────────────────────────
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: crane-webui
+    hostname: webui
+    restart: unless-stopped
+    depends_on:
+      - ollama
+    ports:
+      - "3000:8080"
+    volumes:
+      - webui-data:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_AUTH=false
+      - WEBUI_NAME=CRANE LLM Lab
+    networks:
+      - llm-net
+    profiles: ["serve", "full"]
+
+  # ── PIPELINE: n8n workflow automation ───────────────────────────────────────
+  pipeline:
+    image: n8nio/n8n:latest
+    container_name: crane-pipeline
+    hostname: pipeline
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    volumes:
+      - ${PWD}/data/pipelines:/home/node/.n8n
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=false
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678
+    networks:
+      - llm-net
+    profiles: ["pipeline", "full"]

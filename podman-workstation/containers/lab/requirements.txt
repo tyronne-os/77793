@@ -1,0 +1,55 @@
+# Core ML
+torch --index-url https://download.pytorch.org/whl/cpu
+transformers>=4.40
+accelerate
+peft
+bitsandbytes
+datasets
+tokenizers
+sentencepiece
+safetensors
+
+# LLM / Agent frameworks
+langchain
+langchain-community
+langchain-core
+llama-index
+llama-index-llms-ollama
+openai
+anthropic
+
+# HuggingFace
+huggingface_hub
+diffusers
+
+# Inference
+llama-cpp-python
+ollama
+
+# Data / Compute
+numpy
+pandas
+scipy
+scikit-learn
+matplotlib
+seaborn
+plotly
+
+# API / Serving
+fastapi
+uvicorn[standard]
+httpx
+pydantic
+gradio
+
+# Notebook
+jupyterlab
+ipywidgets
+rich
+tqdm
+python-dotenv
+
+# Utils
+requests
+aiohttp
+GitPython

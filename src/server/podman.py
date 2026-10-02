@@ -434,3 +434,89 @@ async def convert_project(project_path: str) -> dict:
         "suggestions": suggestions,
         "message": f"{len(changes)} file(s) processed" if changes else "No Docker files found in project",
     }
+
+
+# ── Workstation management ─────────────────────────────────────────────────────
+
+WS_DIR = Path("/mnt/elana/ai_apps/crane/podman-workstation")
+LAUNCH_SH = WS_DIR / "launch.sh"
+
+WORKSTATION_SERVICES = {
+    "crane-lab":      {"label": "Jupyter Lab",    "port": 8888, "url": "http://localhost:8888",  "profile": "lab"},
+    "crane-ollama":   {"label": "Ollama",          "port": 11434,"url": "http://localhost:11434", "profile": "serve"},
+    "crane-webui":    {"label": "Open WebUI",      "port": 3000, "url": "http://localhost:3000",  "profile": "serve"},
+    "crane-pipeline": {"label": "n8n Pipelines",   "port": 5678, "url": "http://localhost:5678",  "profile": "pipeline"},
+}
+
+
+async def workstation_status() -> dict:
+    """Get status of all workstation containers."""
+    bin_ = _podman()
+    if not bin_:
+        return {"ok": False, "message": "podman not found"}
+    services = {}
+    for name, info in WORKSTATION_SERVICES.items():
+        rc, out, _ = await _run(bin_, "inspect", "--format", "{{.State.Status}}", name, timeout=5)
+        state = out.strip() if rc == 0 else "stopped"
+        services[name] = {**info, "state": state, "running": state == "running"}
+    return {"ok": True, "services": services}
+
+
+async def workstation_start(profile: str) -> dict:
+    """Start workstation services by profile: lab | serve | full | pipeline."""
+    if not LAUNCH_SH.exists():
+        return {"ok": False, "message": "Workstation not set up — launch.sh not found"}
+    rc, out, err = await _run("bash", str(LAUNCH_SH), profile, timeout=120)
+    return {"ok": rc == 0, "output": (out + err).strip()[-1200:]}
+
+
+async def workstation_stop() -> dict:
+    """Stop all workstation containers."""
+    if LAUNCH_SH.exists():
+        rc, out, err = await _run("bash", str(LAUNCH_SH), "stop", timeout=30)
+        return {"ok": rc == 0, "output": (out + err).strip()}
+    bin_ = _podman()
+    if not bin_:
+        return {"ok": False, "message": "podman not found"}
+    names = list(WORKSTATION_SERVICES.keys())
+    rc, out, err = await _run(bin_, "stop", *names, timeout=20)
+    await _run(bin_, "rm", *names, timeout=10)
+    return {"ok": True, "output": "Stopped"}
+
+
+async def workstation_pull_model(model: str) -> dict:
+    """Pull an Ollama model into crane-ollama."""
+    bin_ = _podman()
+    if not bin_:
+        return {"ok": False, "message": "podman not found"}
+    rc, out, err = await _run(bin_, "exec", "crane-ollama", "ollama", "pull", model, timeout=300)
+    return {"ok": rc == 0, "output": (out + err).strip()[-800:]}
+
+
+async def workstation_list_models() -> dict:
+    """List downloaded Ollama models."""
+    bin_ = _podman()
+    if not bin_:
+        return {"ok": False, "message": "podman not found"}
+    rc, out, err = await _run(bin_, "exec", "crane-ollama", "ollama", "list", timeout=10)
+    if rc != 0:
+        return {"ok": False, "message": "Ollama not running", "models": []}
+    lines = [l for l in out.strip().splitlines() if l and not l.startswith("NAME")]
+    models = []
+    for line in lines:
+        parts = line.split()
+        if parts:
+            models.append({"name": parts[0], "id": parts[1] if len(parts) > 1 else "", "size": parts[2] if len(parts) > 2 else ""})
+    return {"ok": True, "models": models}
+
+
+async def workstation_build_lab() -> dict:
+    """Build the crane-lab Docker image."""
+    dockerfile = WS_DIR / "containers" / "lab" / "Dockerfile"
+    if not dockerfile.exists():
+        return {"ok": False, "message": "Lab Dockerfile not found"}
+    bin_ = _podman()
+    if not bin_:
+        return {"ok": False, "message": "podman not found"}
+    rc, out, err = await _run(bin_, "build", "-t", "crane-lab:latest", str(dockerfile.parent), timeout=600)
+    return {"ok": rc == 0, "output": (out + err).strip()[-1200:]}

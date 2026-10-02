@@ -501,6 +501,37 @@ async def podman_convert(body: dict):
     return await _podman.convert_project(path)
 
 
+# ── Workstation endpoints ──────────────────────────────────────────────────────
+
+@app.get("/api/workstation/status")
+async def workstation_status():
+    return await _podman.workstation_status()
+
+@app.post("/api/workstation/start")
+async def workstation_start(body: dict):
+    profile = body.get("profile", "serve")
+    return await _podman.workstation_start(profile)
+
+@app.post("/api/workstation/stop")
+async def workstation_stop():
+    return await _podman.workstation_stop()
+
+@app.post("/api/workstation/pull")
+async def workstation_pull(body: dict):
+    model = (body.get("model") or "").strip()
+    if not model:
+        raise HTTPException(400, "model required")
+    return await _podman.workstation_pull_model(model)
+
+@app.get("/api/workstation/models")
+async def workstation_models():
+    return await _podman.workstation_list_models()
+
+@app.post("/api/workstation/build")
+async def workstation_build():
+    return await _podman.workstation_build_lab()
+
+
 @app.websocket("/ws/terminal")
 async def ws_terminal(ws: WebSocket, target: str = "local"):
     if not origin_ok(ws):
