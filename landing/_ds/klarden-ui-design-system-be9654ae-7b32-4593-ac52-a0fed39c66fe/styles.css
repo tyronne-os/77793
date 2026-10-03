@@ -1,0 +1,11 @@
+@import "tokens/colors.css";
+@import "tokens/typography.css";
+@import "tokens/spacing.css";
+
+*{border-color:var(--border);box-sizing:border-box}
+body{background:var(--background);color:var(--foreground);font-family:var(--font-sans);margin:0}
+a{color:var(--foreground)}
+a:hover{color:var(--muted-foreground)}
+
+@keyframes logo-carousel{from{transform:translateX(0)}to{transform:translateX(calc(-50% - var(--gap, 1rem) / 2))}}
+@keyframes logo-carousel-reverse{from{transform:translateX(calc(-50% - var(--gap, 1rem) / 2))}to{transform:translateX(0)}}

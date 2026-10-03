@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="_ds/klarden-ui-design-system-be9654ae-7b32-4593-ac52-a0fed39c66fe/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/klarden-ui-design-system-be9654ae-7b32-4593-ac52-a0fed39c66fe/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/klarden-ui-design-system-be9654ae-7b32-4593-ac52-a0fed39c66fe/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/klarden-ui-design-system-be9654ae-7b32-4593-ac52-a0fed39c66fe/styles.css">
+  <script src="_ds/klarden-ui-design-system-be9654ae-7b32-4593-ac52-a0fed39c66fe/_ds_bundle.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: #060910; font-family: 'Geist','Helvetica Neue',sans-serif; color: #e8ecf4; }
+    a { color: inherit; text-decoration: none; }
+    a:hover { color: #C9A84C; }
+
+    @keyframes slabLoop {
+      0%   { transform: translateY(72vh) rotate(-2deg);   opacity: 0; }
+      6%   { opacity: 0.35; }
+      25%  { transform: translateY(0)    rotate(0.4deg);  opacity: 1; }
+      31%  { transform: translateY(-2.8vh) rotate(0deg);  opacity: 1; }
+      38%  { transform: translateY(0)    rotate(0deg);    opacity: 1; }
+      64%  { transform: translateY(0)    rotate(0deg);    opacity: 1; }
+      69%  { transform: translateY(-1.6vh) rotate(0.2deg);opacity: 1; }
+      75%  { transform: translateY(0)    rotate(0deg);    opacity: 1; }
+      85%  { transform: translateY(0)    rotate(0deg);    opacity: 0.95; }
+      96%  { transform: translateY(-76vh) rotate(1.8deg); opacity: 0; }
+      100% { transform: translateY(72vh) rotate(-2deg);   opacity: 0; }
+    }
+
+    @keyframes cableAnim {
+      0%,100% { stroke-dashoffset: 400; opacity: 0; }
+      8%      { opacity: 1; stroke-dashoffset: 400; }
+      24%     { stroke-dashoffset: 0; opacity: 1; }
+      84%     { stroke-dashoffset: 0; opacity: 1; }
+      96%     { stroke-dashoffset: -400; opacity: 0; }
+    }
+
+    @keyframes navIn  { from{opacity:0;transform:translateY(-14px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(18px)}   to{opacity:1;transform:translateY(0)} }
+    @keyframes portIn { from{opacity:0;transform:translateX(36px)}   to{opacity:1;transform:translateX(0)} }
+  </style>
+</helmet>
+
+<!-- ── NAV ─────────────────────────────────────────────────────── -->
+<nav style="position:fixed;top:0;left:0;width:100%;z-index:200;height:72px;display:flex;align-items:center;padding:0 40px;backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);background:rgba(4,6,14,0.9);border-bottom:1px solid rgba(201,168,76,0.12);animation:navIn 0.6s ease 0.1s both">
+  <a href="#home" style="display:flex;align-items:flex-end;gap:2px;flex-shrink:0;text-decoration:none">
+    <span style="font-size:62px;font-weight:900;line-height:0.86;font-family:Georgia,serif;background:linear-gradient(150deg,#8B6914 0%,#C9A84C 30%,#F2D060 55%,#C9A84C 78%,#8B6914 100%);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-0.04em">C</span>
+    <span style="font-size:21px;font-weight:700;letter-spacing:0.22em;color:#f0f4f8;padding-bottom:8px;font-family:'Geist',sans-serif">RANE IT</span>
+  </a>
+  <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:44px;align-items:center">
+    <a href="#home"     style="font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(210,224,244,0.78);transition:color 0.2s">Home</a>
+    <a href="#services" style="font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(210,224,244,0.78);transition:color 0.2s">Services</a>
+    <a href="#stack"    style="font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(210,224,244,0.78);transition:color 0.2s">Our Stack</a>
+    <a href="#contact"  style="font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(210,224,244,0.78);transition:color 0.2s">Contact</a>
+  </div>
+  <div style="margin-left:auto">
+    <a href="#contact" style="display:inline-flex;align-items:center;padding:8px 20px;border:1px solid rgba(201,168,76,0.5);border-radius:4px;font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#C9A84C;background:rgba(201,168,76,0.06);text-decoration:none">Get Shit Done</a>
+  </div>
+</nav>
+
+<!-- ── HERO ───────────────────────────────────────────────────── -->
+<section id="home" style="position:relative;width:100%;height:100vh;overflow:hidden;background:linear-gradient(180deg,#030508 0%,#040810 12%,#060c1c 25%,#09142c 42%,#10203e 58%,#1a2e52 72%,#253a62 82%,#3a5072 90%,#666478 95%,#8c7858 98%,#b07838 100%)">
+
+  <!-- Horizon glow -->
+  <div style="position:absolute;bottom:0;left:0;width:100%;height:42%;background:radial-gradient(ellipse 72% 80% at 38% 100%,rgba(172,114,44,0.3) 0%,rgba(90,64,24,0.1) 60%,transparent 100%);pointer-events:none"></div>
+
+  <!-- Crane + city SVG overlay -->
+  <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none" viewBox="0 0 1920 1080" preserveAspectRatio="none">
+    <!-- City silhouette -->
+    <path d="M0,1080 L0,840 L60,840 L60,800 L100,800 L100,770 L130,770 L130,750 L165,750 L165,770 L210,770 L210,730 L250,730 L250,700 L290,700 L290,678 L324,678 L324,648 L360,648 L360,678 L400,678 L400,638 L440,638 L440,608 L480,608 L480,578 L520,578 L520,608 L560,608 L560,570 L602,570 L602,538 L642,538 L642,500 L682,500 L682,540 L722,540 L722,568 L762,568 L762,538 L802,538 L802,498 L852,498 L852,468 L894,468 L894,436 L944,436 L944,406 L994,406 L994,376 L1044,376 L1044,406 L1084,406 L1084,436 L1126,436 L1126,468 L1166,468 L1166,498 L1206,498 L1206,540 L1244,540 L1244,510 L1282,510 L1282,478 L1320,478 L1320,458 L1372,458 L1372,478 L1412,478 L1412,510 L1452,510 L1452,540 L1492,540 L1492,572 L1532,572 L1532,602 L1572,602 L1572,642 L1612,642 L1612,674 L1652,674 L1652,704 L1702,704 L1702,734 L1752,734 L1752,762 L1802,762 L1802,802 L1862,802 L1862,840 L1920,840 L1920,1080 Z" fill="#040810"/>
+
+    <!-- Tower -->
+    <rect x="1548" y="0" width="50" height="1080" fill="#0c1620"/>
+    <rect x="1558" y="0" width="14" height="1080" fill="#14202e" opacity="0.75"/>
+    <line x1="1548" y1="0"   x2="1598" y2="90"  stroke="#08101c" stroke-width="4.5"/>
+    <line x1="1598" y1="0"   x2="1548" y2="90"  stroke="#08101c" stroke-width="4.5"/>
+    <line x1="1548" y1="90"  x2="1598" y2="180" stroke="#08101c" stroke-width="4.5"/>
+    <line x1="1598" y1="90"  x2="1548" y2="180" stroke="#08101c" stroke-width="4.5"/>
+    <line x1="1548" y1="180" x2="1598" y2="270" stroke="#08101c" stroke-width="4.5"/>
+    <line x1="1598" y1="180" x2="1548" y2="270" stroke="#08101c" stroke-width="4.5"/>
+    <line x1="1548" y1="270" x2="1598" y2="360" stroke="#08101c" stroke-width="4.5"/>
+    <line x1="1598" y1="270" x2="1548" y2="360" stroke="#08101c" stroke-width="4.5"/>
+
+    <!-- Main jib -->
+    <rect x="380" y="146" width="1178" height="26" fill="#0c1620"/>
+    <rect x="380" y="148" width="1178" height="11" fill="#14202e"/>
+    <!-- Counter jib -->
+    <rect x="1598" y="148" width="230" height="20" fill="#0c1620"/>
+    <!-- Mast peak -->
+    <polygon points="1548,50 1573,142 1598,50" fill="#0c1620"/>
+    <!-- Pendant lines -->
+    <line x1="1573" y1="50" x2="380"  y2="146" stroke="#14202e" stroke-width="3"/>
+    <line x1="1573" y1="50" x2="1828" y2="148" stroke="#14202e" stroke-width="2.2"/>
+    <line x1="1573" y1="50" x2="970"  y2="146" stroke="#0e1828" stroke-width="2"/>
+
+    <!-- Trolley at ~25% from left -->
+    <rect x="454" y="163" width="46" height="20" rx="2" fill="#1a2a40"/>
+    <circle cx="463" cy="163" r="4.5" fill="#0c1620"/>
+    <circle cx="491" cy="163" r="4.5" fill="#0c1620"/>
+
+    <!-- Animated hoist cable (draws from arm, retracts on hoist) -->
+    <line x1="477" y1="183" x2="477" y2="565" stroke="#22324a" stroke-width="3.2" style="stroke-dasharray:382;stroke-dashoffset:382;animation:cableAnim 10s linear 0s infinite both"/>
+    <line x1="479" y1="183" x2="479" y2="565" stroke="#2c3e56" stroke-width="1.3" style="stroke-dasharray:382;stroke-dashoffset:382;animation:cableAnim 10s linear 0s infinite both"/>
+
+    <!-- Hook -->
+    <rect x="463" y="565" width="30" height="22" rx="3" fill="#1a2a40"/>
+    <path d="M478,587 Q494,602 488,618 Q482,634 466,634 Q450,634 444,620 Q438,606 448,598" fill="none" stroke="#1a2a40" stroke-width="6" stroke-linecap="round"/>
+
+    <!-- Counterweight -->
+    <rect x="1712" y="157" width="88" height="48" rx="2" fill="#0a101e"/>
+    <rect x="1714" y="159" width="84" height="44" rx="1" fill="#0e1828"/>
+
+    <!-- Gold glint on jib top edge -->
+    <line x1="380" y1="146" x2="1548" y2="146" stroke="#C9A84C" stroke-width="0.8" opacity="0.13"/>
+    <rect x="1548" y="142" width="50" height="5" fill="#C9A84C" opacity="0.1"/>
+  </svg>
+
+  <!-- Animated slab stack -->
+  <div style="position:absolute;left:10%;top:52%;transform:translateY(-50%);z-index:5">
+    {{ slabStack }}
+  </div>
+
+  <!-- Portrait: right side, cropped to woman only -->
+  <div style="position:absolute;right:0;top:0;width:44%;height:100%;overflow:hidden;animation:portIn 1.2s ease 0.5s both">
+    <!-- Left edge fade -->
+    <div style="position:absolute;left:0;top:0;width:68%;height:100%;background:linear-gradient(90deg,#030508 0%,rgba(3,5,8,0.96) 50%,transparent 100%);z-index:2;pointer-events:none"></div>
+    <!-- Bottom fade — deep enough to kill the baked-in button -->
+    <div style="position:absolute;bottom:0;left:0;width:100%;height:45%;background:linear-gradient(0deg,rgba(0,0,0,0.98) 0%,rgba(0,0,0,0.9) 35%,transparent 100%);z-index:2;pointer-events:none"></div>
+    <!-- Top fade -->
+    <div style="position:absolute;top:0;left:0;width:100%;height:10%;background:linear-gradient(180deg,#030508 0%,transparent 100%);z-index:2;pointer-events:none"></div>
+    <img src="uploads/Gemini_Generated_Image_d9lxxcd9lxxcd9lx.jpeg" style="width:100%;height:100%;object-fit:cover;object-position:96% 10%" alt=""/>
+  </div>
+
+  <!-- Tagline + CTA -->
+  <div style="position:absolute;bottom:7vh;left:0;width:100%;display:flex;flex-direction:column;align-items:center;gap:18px;z-index:10;animation:fadeUp 0.9s ease 1.2s both">
+    <p style="font-size:clamp(10px,0.85vw,14px);font-weight:700;letter-spacing:0.3em;text-transform:uppercase;color:rgba(196,212,236,0.52);text-align:center">From concept to completion at the speed of AI</p>
+    <a href="#contact" style="display:inline-flex;align-items:center;padding:15px 52px;background:linear-gradient(135deg,#7a5808 0%,#c9a840 35%,#f0cc52 55%,#c9a840 75%,#7a5808 100%);color:#030508;font-size:13px;font-weight:800;letter-spacing:0.22em;text-transform:uppercase;border-radius:3px;box-shadow:0 6px 32px rgba(201,168,64,0.32),0 1px 0 rgba(255,255,255,0.22) inset;text-decoration:none">GET SHIT DONE</a>
+  </div>
+</section>
+
+<!-- ── SERVICES ───────────────────────────────────────────────── -->
+<section id="services" style="padding:120px 80px;background:#060910">
+  <div style="max-width:1240px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:44px">
+      <div style="width:28px;height:1px;background:#C9A84C;opacity:0.6"></div>
+      <span style="font-size:10px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:#C9A84C;opacity:0.75">Services</span>
+    </div>
+    <h2 style="font-size:clamp(32px,3.2vw,54px);font-weight:800;line-height:1.08;letter-spacing:-0.02em;color:#f0f4fc;margin-bottom:64px;text-wrap:pretty">Built for engineers.<br><span style="background:linear-gradient(138deg,#7a5808,#c9a840,#f0cc52,#c9a840,#7a5808);-webkit-background-clip:text;background-clip:text;color:transparent">No subscriptions. No limits.</span></h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px">
+      <div style="padding:30px 26px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:12px">
+        <div style="width:40px;height:40px;border:1px solid rgba(201,168,76,0.28);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:20px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <h3 style="font-size:16px;font-weight:700;color:#e8ecf4;margin-bottom:10px">API-Agnostic Integration</h3>
+        <p style="font-size:13px;line-height:1.68;color:rgba(176,196,224,0.6)">Connect Claude, Grok, GPT, or any OpenAI-compatible endpoint. Swap models without changing a line of code.</p>
+      </div>
+      <div style="padding:30px 26px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:12px">
+        <div style="width:40px;height:40px;border:1px solid rgba(201,168,76,0.28);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:20px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <h3 style="font-size:16px;font-weight:700;color:#e8ecf4;margin-bottom:10px">Local AI Runtime</h3>
+        <p style="font-size:13px;line-height:1.68;color:rgba(176,196,224,0.6)">60–110 tok/sec on commodity CPU — no GPU required. Full capability runs on-device, fully offline.</p>
+      </div>
+      <div style="padding:30px 26px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:12px">
+        <div style="width:40px;height:40px;border:1px solid rgba(201,168,76,0.28);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:20px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <h3 style="font-size:16px;font-weight:700;color:#e8ecf4;margin-bottom:10px">IDE-Native Intelligence</h3>
+        <p style="font-size:13px;line-height:1.68;color:rgba(176,196,224,0.6)">AI woven directly into the editor — context-aware completions, inline generation, intelligent refactoring.</p>
+      </div>
+      <div style="padding:30px 26px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:12px">
+        <div style="width:40px;height:40px;border:1px solid rgba(201,168,76,0.28);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:20px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3 style="font-size:16px;font-weight:700;color:#e8ecf4;margin-bottom:10px">Zero Subscription</h3>
+        <p style="font-size:13px;line-height:1.68;color:rgba(176,196,224,0.6)">No monthly fees, no usage caps, no data leaving your machine. Enterprise capability at zero ongoing cost.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── OUR STACK ──────────────────────────────────────────────── -->
+<section id="stack" style="padding:120px 80px;background:#080c1a">
+  <div style="max-width:1240px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:44px">
+      <div style="width:28px;height:1px;background:#C9A84C;opacity:0.6"></div>
+      <span style="font-size:10px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:#C9A84C;opacity:0.75">Our Stack</span>
+    </div>
+    <h2 style="font-size:clamp(32px,3.2vw,54px);font-weight:800;line-height:1.08;letter-spacing:-0.02em;color:#f0f4fc;margin-bottom:14px">Engineered on proven foundations.</h2>
+    <p style="font-size:15px;color:rgba(176,196,224,0.58);margin-bottom:56px;max-width:500px;line-height:1.65">Open standards. Local-first architecture. Battle-tested runtimes.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px">
+      <div style="padding:24px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:#C9A84C;margin-bottom:16px;opacity:0.72">Runtime</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">llama.cpp</span>
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">GGUF / GGML</span>
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">ONNX Runtime</span>
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">WebAssembly</span>
+        </div>
+      </div>
+      <div style="padding:24px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:#C9A84C;margin-bottom:16px;opacity:0.72">Models</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">Llama 3.2</span>
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">Mistral 7B</span>
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">Qwen 2.5</span>
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">Phi-3 Mini</span>
+        </div>
+      </div>
+      <div style="padding:24px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:#C9A84C;margin-bottom:16px;opacity:0.72">Interface</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">Tauri / Electron</span>
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">Monaco Editor</span>
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">React 19</span>
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">TypeScript</span>
+        </div>
+      </div>
+      <div style="padding:24px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:#C9A84C;margin-bottom:16px;opacity:0.72">APIs</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">Claude API</span>
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">Grok API</span>
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">OpenAI-compat</span>
+          <span style="font-size:12px;font-weight:500;color:rgba(196,214,238,0.7);font-family:'Geist Mono',monospace">Local REST</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:28px;padding:22px 28px;background:rgba(201,168,76,0.055);border:1px solid rgba(201,168,76,0.17);border-radius:10px;display:flex;align-items:center;gap:24px">
+      <div style="display:flex;align-items:baseline;gap:5px;flex-shrink:0">
+        <span style="font-size:44px;font-weight:900;font-family:'Geist Mono',monospace;color:#C9A84C;letter-spacing:-0.03em">110</span>
+        <span style="font-size:15px;font-weight:600;color:rgba(201,168,76,0.65)">tok/sec</span>
+      </div>
+      <div style="width:1px;height:40px;background:rgba(201,168,76,0.2);flex-shrink:0"></div>
+      <p style="font-size:13px;line-height:1.68;color:rgba(176,196,224,0.58)">Peak throughput on commodity CPU — no GPU, no cloud, no subscription. Comparable to hosted frontier models at zero operational cost.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── CONTACT ────────────────────────────────────────────────── -->
+<section id="contact" style="padding:120px 80px;background:#060910;position:relative;overflow:hidden">
+  <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:480px;height:160px;background:radial-gradient(ellipse at bottom,rgba(201,168,76,0.08) 0%,transparent 70%);pointer-events:none"></div>
+  <div style="max-width:580px;margin:0 auto;text-align:center">
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:44px">
+      <div style="width:28px;height:1px;background:#C9A84C;opacity:0.6"></div>
+      <span style="font-size:10px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:#C9A84C;opacity:0.75">Contact</span>
+      <div style="width:28px;height:1px;background:#C9A84C;opacity:0.6"></div>
+    </div>
+    <h2 style="font-size:clamp(32px,3vw,52px);font-weight:800;line-height:1.1;letter-spacing:-0.02em;color:#f0f4fc;margin-bottom:16px;text-wrap:pretty">Ready to build?</h2>
+    <p style="font-size:15px;line-height:1.65;color:rgba(176,196,224,0.58);margin-bottom:44px">Internal access, collaboration, and build requests.</p>
+    <div style="display:flex;flex-direction:column;gap:13px;text-align:left">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:rgba(176,196,224,0.46)">Name</label>
+          <input type="text" placeholder="Your name" style="background:rgba(255,255,255,0.033);border:1px solid rgba(255,255,255,0.09);border-radius:6px;padding:11px 13px;font-size:14px;color:#e8ecf4;font-family:'Geist',sans-serif;outline:none"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:rgba(176,196,224,0.46)">Email</label>
+          <input type="email" placeholder="you@domain.com" style="background:rgba(255,255,255,0.033);border:1px solid rgba(255,255,255,0.09);border-radius:6px;padding:11px 13px;font-size:14px;color:#e8ecf4;font-family:'Geist',sans-serif;outline:none"/>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:rgba(176,196,224,0.46)">Message</label>
+        <textarea placeholder="What are you building?" rows="5" style="background:rgba(255,255,255,0.033);border:1px solid rgba(255,255,255,0.09);border-radius:6px;padding:12px 13px;font-size:14px;color:#e8ecf4;font-family:'Geist',sans-serif;outline:none;resize:vertical"></textarea>
+      </div>
+      <button style="margin-top:5px;padding:15px;background:linear-gradient(135deg,#7a5808 0%,#c9a840 35%,#f0cc52 55%,#c9a840 75%,#7a5808 100%);color:#030508;font-size:13px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;border:none;border-radius:4px;cursor:pointer;font-family:'Geist',sans-serif;box-shadow:0 6px 28px rgba(201,168,64,0.2)">GET SHIT DONE</button>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────── -->
+<footer style="padding:26px 80px;background:#040710;border-top:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:space-between">
+  <div style="display:flex;align-items:flex-end;gap:2px">
+    <span style="font-size:28px;font-weight:900;line-height:0.88;font-family:Georgia,serif;background:linear-gradient(150deg,#8B6914,#C9A84C,#F2D060);-webkit-background-clip:text;background-clip:text;color:transparent">C</span>
+    <span style="font-size:11px;font-weight:700;letter-spacing:0.2em;color:rgba(196,212,236,0.45);padding-bottom:4px">RANE IT</span>
+  </div>
+  <p style="font-size:11px;color:rgba(176,196,224,0.28);letter-spacing:0.06em">© 2026 Crane IT — Internal Use Only</p>
+  <div style="display:flex;gap:22px">
+    <a href="#services" style="font-size:10px;color:rgba(176,196,224,0.35);letter-spacing:0.1em;text-transform:uppercase">Services</a>
+    <a href="#stack"    style="font-size:10px;color:rgba(176,196,224,0.35);letter-spacing:0.1em;text-transform:uppercase">Stack</a>
+    <a href="#contact"  style="font-size:10px;color:rgba(176,196,224,0.35);letter-spacing:0.1em;text-transform:uppercase">Contact</a>
+  </div>
+</footer>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const makeSlab = (word, delay) => React.createElement('div', {
+      key: word,
+      style: {
+        background: [
+          'linear-gradient(138deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0) 48%)',
+          'linear-gradient(205deg, rgba(192,192,192,0.2) 0%, transparent 52%)',
+          'linear-gradient(108deg, #eaeaea 0%, #bebebe 18%, #d4d4d4 36%, #aeaeae 54%, #c8c8c8 72%, #dedede 88%, #c0c0c0 100%)',
+        ].join(','),
+        padding: '14px clamp(18px,2.2vw,40px) 18px',
+        borderRadius: '3px',
+        boxShadow: '0 28px 64px rgba(0,0,0,0.64), 0 8px 24px rgba(0,0,0,0.38), inset 0 1.5px 1px rgba(255,255,255,0.8), inset 0 -1px 2px rgba(0,0,0,0.12)',
+        border: '1px solid rgba(255,255,255,0.62)',
+        animation: 'slabLoop 10s cubic-bezier(0.4,0,0.2,1) ' + delay + ' infinite both',
+        willChange: 'transform, opacity',
+      }
+    },
+      React.createElement('span', {
+        style: {
+          fontFamily: "'Geist','Helvetica Neue',Arial,sans-serif",
+          fontSize: 'clamp(24px,3vw,54px)',
+          fontWeight: '900',
+          letterSpacing: '0.13em',
+          background: 'linear-gradient(138deg,#6c4a08 0%,#c6a23a 24%,#eeca50 50%,#c6a23a 76%,#6c4a08 100%)',
+          WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          color: 'transparent',
+          display: 'block',
+          lineHeight: '1.12',
+        }
+      }, word)
+    );
+
+    return {
+      slabStack: React.createElement('div', {
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '7px',
+          filter: 'drop-shadow(0 50px 80px rgba(0,0,0,0.65))',
+        }
+      },
+        makeSlab('INNOVATION',   '0s'),
+        makeSlab('CREATION',     '0.22s'),
+        makeSlab('INTEGRATION',  '0.44s')
+      )
+    };
+  }
+}
+</script>
+</body>
+</html>

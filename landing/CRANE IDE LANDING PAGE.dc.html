@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="_ds/klarden-ui-design-system-be9654ae-7b32-4593-ac52-a0fed39c66fe/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/klarden-ui-design-system-be9654ae-7b32-4593-ac52-a0fed39c66fe/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/klarden-ui-design-system-be9654ae-7b32-4593-ac52-a0fed39c66fe/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/klarden-ui-design-system-be9654ae-7b32-4593-ac52-a0fed39c66fe/styles.css">
+  <script src="_ds/klarden-ui-design-system-be9654ae-7b32-4593-ac52-a0fed39c66fe/_ds_bundle.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:#09090b;color:#fafafa;font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    a{color:inherit;text-decoration:none}
+    a:hover{color:#fbbf24}
+    @keyframes focusIn{0%{filter:blur(18px) brightness(.4);transform:scale(1.14)}100%{filter:blur(0) brightness(1);transform:scale(1)}}
+    @keyframes kb{0%{transform:scale(1) translate3d(0,0,0)}100%{transform:scale(1.06) translate3d(-1%,-1.2%,0)}}
+    @keyframes sway{0%{transform:rotate(-.55deg) translateY(2px)}50%{transform:rotate(.55deg) translateY(-5px)}100%{transform:rotate(-.55deg) translateY(2px)}}
+    @keyframes glint{0%,30%{background-position:160% 0}70%,100%{background-position:-60% 0}}
+    @keyframes drift{0%{transform:translate3d(-6%,0,0)}100%{transform:translate3d(6%,-2%,0)}}
+    @keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-1%)}100%{transform:translate(0,0)}}
+    @keyframes rise{0%{opacity:0;transform:translateY(22px);filter:blur(8px)}100%{opacity:1;transform:translateY(0);filter:blur(0)}}
+    @keyframes chrome{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
+    @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(52,211,153,.6)}50%{opacity:.7;box-shadow:0 0 0 5px rgba(52,211,153,0)}}
+    @media(max-width:1100px){.tcard{display:none!important}}
+  </style>
+</helmet>
+
+<section id="home" data-screen-label="Hero" style="position:relative;width:100%;height:100vh;min-height:560px;overflow:hidden;background:#09090b">
+  {{ scene }}
+
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse 120% 90% at 50% 40%,transparent 55%,rgba(9,9,11,.75) 100%);pointer-events:none"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;height:52%;background:linear-gradient(0deg,#09090b 0%,rgba(9,9,11,.92) 40%,rgba(9,9,11,0) 100%);pointer-events:none"></div>
+  <div style="position:absolute;left:0;right:0;top:0;height:140px;background:linear-gradient(180deg,rgba(9,9,11,.85) 0%,rgba(9,9,11,0) 100%);pointer-events:none"></div>
+
+  <header style="position:absolute;top:0;left:0;right:0;z-index:20;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;padding:20px clamp(16px,3vw,40px);animation:rise .9s cubic-bezier(.2,.8,.2,1) .4s both">
+    <a href="#home" style="display:flex;align-items:flex-end;gap:6px;justify-self:start">
+      <span style="font-family:Georgia,'Times New Roman',serif;font-size:clamp(96px,10vw,150px);line-height:.74;font-weight:700;letter-spacing:-.04em;background:linear-gradient(115deg,#5a3d05 0%,#c6a23a 18%,#fff6cf 30%,#eeca50 42%,#8a6410 56%,#f5d775 70%,#fff3c2 76%,#b88a22 88%,#5a3d05 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 4px 14px rgba(0,0,0,.55)) drop-shadow(0 0 18px rgba(245,196,81,.25));animation:chrome 5s ease-in-out infinite">C</span>
+      <span style="display:flex;flex-direction:column;gap:8px;padding-bottom:6px;flex:none;white-space:nowrap">
+        <span style="font-size:clamp(22px,2.3vw,34px);font-weight:700;letter-spacing:.24em;color:#fafafa;line-height:1;text-shadow:0 2px 12px rgba(0,0,0,.6)">RANE IT</span>
+        <span style="font-family:'Geist Mono',monospace;font-size:clamp(12px,1.1vw,16px);font-weight:600;letter-spacing:.4em;color:#eeca50;line-height:1;white-space:nowrap">IDE</span>
+      </span>
+    </a>
+    <nav style="justify-self:center;display:flex;align-items:center;gap:2px;padding:5px;border-radius:999px;background:rgba(24,24,27,.55);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);box-shadow:0 8px 30px rgba(0,0,0,.35)">
+      <a href="#home" style="padding:8px 16px;border-radius:999px;font-size:13px;font-weight:500;background:rgba(255,255,255,.1);color:#fafafa">Home</a>
+      <a href="#services" style="padding:8px 16px;border-radius:999px;font-size:13px;font-weight:500;color:#d4d4d8">Services</a>
+      <a href="#stack" style="padding:8px 16px;border-radius:999px;font-size:13px;font-weight:500;color:#d4d4d8">Our Stack</a>
+      <a href="#contact" style="padding:8px 16px;border-radius:999px;font-size:13px;font-weight:500;color:#d4d4d8">Contact</a>
+    </nav>
+    <div style="justify-self:end;display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:rgba(24,24,27,.55);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.06em;color:#d4d4d8">
+      <span style="width:7px;height:7px;border-radius:50%;background:#34d399;animation:pulse 2s ease-in-out infinite"></span>
+      <span>LOCAL · 0 GPU</span>
+    </div>
+  </header>
+
+  <div style="position:absolute;left:0;right:0;bottom:0;z-index:10;padding:0 clamp(16px,3vw,40px) clamp(24px,5vh,48px);display:flex;align-items:flex-end;justify-content:space-between;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:14px;flex:1 1 0;min-width:0;max-width:min(640px,calc(50% - 200px));text-shadow:0 2px 24px rgba(0,0,0,.8)">
+      <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.18em;color:#a1a1aa;animation:rise .9s cubic-bezier(.2,.8,.2,1) 1.6s both">CRANE IT — LOCAL-FIRST AI IDE</div>
+      <div style="display:grid;min-height:clamp(120px,14vw,230px)">
+        <sc-for list="{{ slides }}" as="sl" hint-placeholder-count="3">
+          <h1 style="grid-area:1/1;align-self:end;font-size:clamp(24px,3.3vw,60px);line-height:1;font-weight:600;letter-spacing:-.04em;color:#fafafa;text-wrap:balance;opacity:{{ sl.o }};transform:{{ sl.t }};filter:{{ sl.f }};transition:opacity .9s cubic-bezier(.2,.8,.2,1),transform .9s cubic-bezier(.2,.8,.2,1),filter .9s;pointer-events:none">{{ sl.a }} <span style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:400;letter-spacing:-.01em;color:#f5c451">{{ sl.b }}</span></h1>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:8px">
+        <sc-for list="{{ slides }}" as="d" hint-placeholder-count="3"><span style="height:3px;width:{{ d.w }};border-radius:2px;background:{{ d.c }};transition:all .5s"></span></sc-for>
+      </div>
+    </div>
+    <div style="position:absolute;left:50%;bottom:clamp(24px,5vh,48px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;white-space:nowrap">
+      <a href="BERYL RE-MASTERED USER INTERFACE.dc.html" style="display:inline-flex;align-items:center;justify-content:center;padding:clamp(20px,2.4vh,30px) clamp(40px,4vw,76px);border-radius:999px;background:linear-gradient(138deg,#6c4a08 0%,#c6a23a 24%,#eeca50 50%,#c6a23a 76%,#6c4a08 100%);color:#1a1204;font:800 clamp(20px,1.9vw,30px) 'Geist',sans-serif;letter-spacing:.14em;text-transform:uppercase;border:1px solid rgba(255,236,170,.6);box-shadow:0 14px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.5),inset 0 -2px 4px rgba(80,50,0,.35)" style-hover="filter:brightness(1.12);transform:scale(1.04)" style-active="transform:scale(.97)">Get shit done</a>
+      <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.16em;color:#71717a">INTERNAL BUILD · NOT FOR RESALE</span>
+    </div>
+    <div class="tcard" style="flex:0 0 auto;width:260px;padding:16px;border-radius:18px;background:rgba(24,24,27,.5);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(24px) saturate(1.3);-webkit-backdrop-filter:blur(24px) saturate(1.3);box-shadow:0 20px 50px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:12px;animation:rise 1s cubic-bezier(.2,.8,.2,1) 2.4s both">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#a1a1aa">
+        <span>THROUGHPUT</span><span>CPU · LIVE</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:6px">
+        <span style="font-family:'Geist Mono',monospace;font-size:44px;font-weight:500;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:#fafafa;line-height:1">{{ tps }}</span>
+        <span style="font-family:'Geist Mono',monospace;font-size:12px;color:#a1a1aa">tok/s</span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:3px;height:32px">
+        <sc-for list="{{ bars }}" as="b" hint-placeholder-count="24">
+          <div style="flex:1;height:{{ b.h }};background:{{ b.c }};border-radius:2px"></div>
+        </sc-for>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);font-family:'Geist Mono',monospace">
+        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:9px;letter-spacing:.12em;color:#71717a">GPU</span><span style="font-size:13px;color:#fafafa">0</span></div>
+        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:9px;letter-spacing:.12em;color:#71717a">COST</span><span style="font-size:13px;color:#fafafa">$0/mo</span></div>
+        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:9px;letter-spacing:.12em;color:#71717a">MODEL</span><span style="font-size:13px;color:#fafafa">{{ model }}</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="services" data-screen-label="Services" style="padding:clamp(72px,10vw,140px) clamp(16px,4vw,56px);background:#09090b">
+  <div style="max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:48px">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:24px">
+      <h2 style="font-size:clamp(32px,4vw,60px);line-height:1;font-weight:600;letter-spacing:-.04em;max-width:760px;text-wrap:balance">Claude-class output. <span style="color:#71717a">No subscription, no GPU, no cloud.</span></h2>
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.18em;color:#a1a1aa">01 — SERVICES</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px">
+      <div style="padding:28px;border-radius:20px;background:#111113;border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:14px;min-height:240px">
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#f5c451">API-AGNOSTIC</span>
+        <h3 style="font-size:22px;font-weight:600;letter-spacing:-.02em">Any model, one editor</h3>
+        <p style="font-size:15px;line-height:1.6;color:#a1a1aa;text-wrap:pretty">Route prompts to Claude, Grok, OpenAI-compatible endpoints, or a local GGUF — switch per file, per task, without changing code.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:auto">
+          <span style="padding:5px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.1);font-family:'Geist Mono',monospace;font-size:11px;color:#d4d4d8">claude</span>
+          <span style="padding:5px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.1);font-family:'Geist Mono',monospace;font-size:11px;color:#d4d4d8">grok</span>
+          <span style="padding:5px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.1);font-family:'Geist Mono',monospace;font-size:11px;color:#d4d4d8">openai-compat</span>
+          <span style="padding:5px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.1);font-family:'Geist Mono',monospace;font-size:11px;color:#d4d4d8">local.gguf</span>
+        </div>
+      </div>
+      <div style="padding:28px;border-radius:20px;background:#111113;border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:14px;min-height:240px">
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#f5c451">LOCAL RUNTIME</span>
+        <h3 style="font-size:22px;font-weight:600;letter-spacing:-.02em">60–110 tok/s on CPU</h3>
+        <p style="font-size:15px;line-height:1.6;color:#a1a1aa;text-wrap:pretty">Quantized inference tuned for everyday hardware. Runs fully offline — code never leaves the machine.</p>
+        <div style="margin-top:auto;font-family:'Geist Mono',monospace;font-size:48px;font-weight:500;letter-spacing:-.04em;color:#fafafa">110<span style="font-size:14px;color:#71717a"> peak</span></div>
+      </div>
+      <div style="padding:28px;border-radius:20px;background:#111113;border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:14px;min-height:240px">
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#f5c451">IDE-NATIVE</span>
+        <h3 style="font-size:22px;font-weight:600;letter-spacing:-.02em">AI built into the build</h3>
+        <p style="font-size:15px;line-height:1.6;color:#a1a1aa;text-wrap:pretty">Context-aware completions, inline generation, multi-file refactors and an agent that ships the task end to end.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="stack" data-screen-label="Stack" style="padding:clamp(72px,10vw,140px) clamp(16px,4vw,56px);background:#09090b;border-top:1px solid rgba(255,255,255,.06)">
+  <div style="max-width:1400px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:48px">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.18em;color:#a1a1aa">02 — OUR STACK</span>
+      <h2 style="font-size:clamp(32px,4vw,60px);line-height:1;font-weight:600;letter-spacing:-.04em;text-wrap:balance">Every layer, <span style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:400;color:#f5c451">load-bearing.</span></h2>
+      <p style="font-size:16px;line-height:1.6;color:#a1a1aa;max-width:440px">Open runtimes and standard protocols — nothing proprietary between the editor and the model.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;font-family:'Geist Mono',monospace;font-size:14px">
+      <div style="display:grid;grid-template-columns:140px 1fr;gap:16px;padding:18px 0;border-top:1px solid rgba(255,255,255,.08)"><span style="color:#71717a">RUNTIME</span><span style="color:#e4e4e7">llama.cpp · GGUF · ONNX</span></div>
+      <div style="display:grid;grid-template-columns:140px 1fr;gap:16px;padding:18px 0;border-top:1px solid rgba(255,255,255,.08)"><span style="color:#71717a">MODELS</span><span style="color:#e4e4e7">Llama · Qwen · Mistral · Phi</span></div>
+      <div style="display:grid;grid-template-columns:140px 1fr;gap:16px;padding:18px 0;border-top:1px solid rgba(255,255,255,.08)"><span style="color:#71717a">PROVIDERS</span><span style="color:#e4e4e7">Claude · Grok · OpenAI-compatible</span></div>
+      <div style="display:grid;grid-template-columns:140px 1fr;gap:16px;padding:18px 0;border-top:1px solid rgba(255,255,255,.08)"><span style="color:#71717a">EDITOR</span><span style="color:#e4e4e7">Tauri · Monaco · TypeScript</span></div>
+      <div style="display:grid;grid-template-columns:140px 1fr;gap:16px;padding:18px 0;border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08)"><span style="color:#71717a">HARDWARE</span><span style="color:#e4e4e7">x86 / ARM CPU · no GPU</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="contact" data-screen-label="Contact" style="padding:clamp(72px,10vw,140px) clamp(16px,4vw,56px);background:#09090b;border-top:1px solid rgba(255,255,255,.06)">
+  <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:28px;text-align:center">
+    <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.18em;color:#a1a1aa">03 — CONTACT</span>
+    <h2 style="font-size:clamp(36px,5vw,72px);line-height:.98;font-weight:600;letter-spacing:-.04em;text-wrap:balance">Something to build? <span style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:400;color:#f5c451">Raise it.</span></h2>
+    <div style="width:100%;display:flex;flex-direction:column;gap:10px;text-align:left">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px">
+        <input type="text" placeholder="Name" style="height:48px;padding:0 16px;border-radius:12px;background:#111113;border:1px solid rgba(255,255,255,.1);color:#fafafa;font:15px 'Geist',sans-serif;outline:none">
+        <input type="email" placeholder="Email" style="height:48px;padding:0 16px;border-radius:12px;background:#111113;border:1px solid rgba(255,255,255,.1);color:#fafafa;font:15px 'Geist',sans-serif;outline:none">
+      </div>
+      <textarea rows="4" placeholder="What are we building?" style="padding:14px 16px;border-radius:12px;background:#111113;border:1px solid rgba(255,255,255,.1);color:#fafafa;font:15px/1.5 'Geist',sans-serif;outline:none;resize:vertical"></textarea>
+    </div>
+    <a href="#contact" style="display:inline-flex;align-items:center;justify-content:center;padding:22px 60px;border-radius:999px;background:linear-gradient(138deg,#6c4a08 0%,#c6a23a 24%,#eeca50 50%,#c6a23a 76%,#6c4a08 100%);color:#1a1204;font:800 clamp(18px,1.6vw,24px) 'Geist',sans-serif;letter-spacing:.14em;text-transform:uppercase;border:1px solid rgba(255,236,170,.6);box-shadow:0 14px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.5),inset 0 -2px 4px rgba(80,50,0,.35)" style-hover="filter:brightness(1.12);transform:scale(1.04)" style-active="transform:scale(.97)">Get shit done</a>
+  </div>
+</section>
+
+<footer style="padding:28px clamp(16px,4vw,56px);border-top:1px solid rgba(255,255,255,.06);display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;color:#71717a">
+  <span>© 2026 CRANE IT · INTERNAL</span>
+  <span>INNOVATION · CREATION · INTEGRATION</span>
+</footer>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { k: 0, tps: 96, hist: Array.from({ length: 24 }, () => 70 + Math.random() * 40), m: 0 };
+
+  componentDidMount() {
+    this.t = setInterval(() => {
+      this.setState(s => {
+        let n = s.tps + (Math.random() - 0.42) * 9;
+        n = Math.max(62, Math.min(110, n));
+        return { tps: n, hist: s.hist.slice(1).concat(n) };
+      });
+    }, 260);
+    const tick = () => { this.kt = setTimeout(() => { this.setState(s => ({ k: (s.k + 1) % 4 })); tick(); }, this.state.k === 0 ? 9000 : 5200); }; tick();
+    this.mt = setInterval(() => this.setState(s => ({ m: (s.m + 1) % 3 })), 4200);
+  }
+  componentWillUnmount() { clearInterval(this.t); clearInterval(this.mt); clearTimeout(this.kt); }
+
+  buildScene() {
+    if (this._scene) return this._scene;
+    const h = React.createElement;
+    const src = 'uploads/Gemini_Generated_Image_3smgi23smgi23smg.jpeg';
+    const clip = 'polygon(29.5% 11%,35.5% 11%,35.5% 20%,44.5% 25.5%,47.5% 25%,47.5% 37%,50.5% 37.5%,50.5% 46%,54% 46.5%,54.5% 61.5%,10% 61.5%,9.5% 47%,11% 46%,11.5% 35%,13.5% 34%,14.5% 23.5%,22% 23.5%,29.5% 20%)';
+    const img = (extra) => h('img', { src, alt: '', draggable: false, style: Object.assign({ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', userSelect: 'none' }, extra || {}) });
+    const grain = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")";
+    this._scene = h('div', { style: { position: 'absolute', inset: 0, overflow: 'hidden', animation: 'focusIn 2.6s cubic-bezier(.2,.7,.1,1) both' } },
+      h('div', { style: { position: 'absolute', width: 'max(100vw,100vh)', aspectRatio: '1 / 1', left: 'calc((100vw - max(100vw,100vh)) * .6)', top: 'calc((100vh - max(100vw,100vh)) * .3)' } },
+        h('div', { style: { position: 'absolute', inset: 0, transformOrigin: '34% 38%', animation: 'kb 22s ease-in-out 2.6s infinite alternate', willChange: 'transform' } },
+          img(),
+          img({ clipPath: clip, WebkitClipPath: clip, filter: 'blur(6px) brightness(.9)' }),
+          h('div', { style: { position: 'absolute', inset: 0, clipPath: clip, WebkitClipPath: clip, transformOrigin: '32% 11%', animation: 'sway 7s ease-in-out infinite', willChange: 'transform', filter: 'drop-shadow(0 12px 18px rgba(0,0,0,.45))' } },
+            img(),
+            h('div', { style: { position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(105deg,transparent 42%,rgba(255,236,190,.7) 50%,transparent 58%)', backgroundSize: '300% 100%', mixBlendMode: 'overlay', animation: 'glint 7s ease-in-out infinite' } })
+          )
+        )
+      ),
+      h('div', { style: { position: 'absolute', left: '-20%', right: '-20%', top: '30%', height: '40%', background: 'radial-gradient(ellipse 50% 50% at 30% 60%,rgba(255,180,110,.16),transparent 70%),radial-gradient(ellipse 40% 40% at 75% 40%,rgba(160,180,255,.08),transparent 70%)', animation: 'drift 26s ease-in-out infinite alternate', mixBlendMode: 'screen', pointerEvents: 'none' } }),
+      h('div', { style: { position: 'absolute', inset: '-10%', backgroundImage: grain, opacity: 0.07, mixBlendMode: 'overlay', animation: 'grain .9s steps(4) infinite', pointerEvents: 'none' } })
+    );
+    return this._scene;
+  }
+
+  renderVals() {
+    const max = 110;
+    const T = [['No subscription. No API keys.','Powered by Berylize AI models.'],['From concept to completion','at the speed of AI.'],['Face to face with your agents —','they get it done.'],['No code. No keyboard.','Speak it, watch Crane build it live.']];
+    const slides = T.map((x, i) => { const on = i === this.state.k; return { a: x[0], b: x[1], o: on ? 1 : 0, t: on ? 'translateY(0)' : 'translateY(18px)', f: on ? 'blur(0)' : 'blur(8px)', w: on ? '32px' : '14px', c: on ? '#eeca50' : 'rgba(255,255,255,.25)' }; });
+    return {
+      scene: this.buildScene(), slides,
+      tps: this.state.tps.toFixed(1),
+      model: ['qwen-7b', 'llama-8b', 'claude'][this.state.m],
+      bars: this.state.hist.map((v, i) => ({
+        h: Math.round((v / max) * 100) + '%',
+        c: i === this.state.hist.length - 1 ? '#f5c451' : 'rgba(250,250,250,' + (0.15 + (i / 24) * 0.45).toFixed(2) + ')'
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

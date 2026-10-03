@@ -1,0 +1,349 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/buttons/**",
+              "components/carousels/**",
+              "components/core/**",
+              "components/inputs/**",
+              "components/navigation/**",
+              "components/typography/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Geist|Geist Mono))/i]",
+        "message": "Font not provided by the design system. Available: Geist, Geist Mono."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AccordionItemData'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|trigger|content|key|ref|className|style|children)$/]",
+        "message": "<AccordionItemData> doesn't accept that prop. Declared props: value, trigger, content."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='LabelInput'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|ringColor|key|ref|className|style|children)$/]",
+        "message": "<LabelInput> doesn't accept that prop. Declared props: label, ringColor."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='LogoCarousel'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|duration|direction|gap|fade|key|ref|className|style|children)$/]",
+        "message": "<LogoCarousel> doesn't accept that prop. Declared props: children, duration, direction, gap, fade."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='LogoCarousel'] > JSXAttribute[name.name='direction'] > Literal[value!=/^(?:left|right)$/]",
+        "message": "<LogoCarousel> direction must be one of 'left' | 'right'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='DockItem'] > JSXAttribute > JSXIdentifier[name!=/^(?:icon|label|onClick|key|ref|className|style|children)$/]",
+        "message": "<DockItem> doesn't accept that prop. Declared props: icon, label, onClick."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='NumberTicker'] > JSXAttribute > JSXIdentifier[name!=/^(?:from|target|duration|className|key|ref|className|style|children)$/]",
+        "message": "<NumberTicker> doesn't accept that prop. Declared props: from, target, duration, className."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Pagination'] > JSXAttribute > JSXIdentifier[name!=/^(?:totalPages|currentPage|onPageChange|siblingCount|color|variant|showEdges|size|key|ref|className|style|children)$/]",
+        "message": "<Pagination> doesn't accept that prop. Declared props: totalPages, currentPage, onPageChange, siblingCount, color, variant, showEdges, size."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Pagination'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:solid|outline|ghost|squircle)$/]",
+        "message": "<Pagination> variant must be one of 'solid' | 'outline' | 'ghost' | 'squircle'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Pagination'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
+        "message": "<Pagination> size must be one of 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='RichButton'] > JSXAttribute > JSXIdentifier[name!=/^(?:color|size|key|ref|className|style|children)$/]",
+        "message": "<RichButton> doesn't accept that prop. Declared props: color, size."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='RichButton'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|default|lg)$/]",
+        "message": "<RichButton> size must be one of 'sm' | 'default' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ShimmerText'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|variant|direction|duration|key|ref|className|style|children)$/]",
+        "message": "<ShimmerText> doesn't accept that prop. Declared props: children, variant, direction, duration."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ShimmerText'] > JSXAttribute[name.name='direction'] > Literal[value!=/^(?:ltr|rtl)$/]",
+        "message": "<ShimmerText> direction must be one of 'ltr' | 'rtl'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Slider'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|max|onValueChange|onValueCommit|showRemaining|color|thumb|disabled|key|ref|className|style|children)$/]",
+        "message": "<Slider> doesn't accept that prop. Declared props: value, max, onValueChange, onValueCommit, showRemaining, color, thumb, disabled."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Slider'] > JSXAttribute[name.name='thumb'] > Literal[value!=/^(?:circle|square|diamond|rounded|line)$/]",
+        "message": "<Slider> thumb must be one of 'circle' | 'square' | 'diamond' | 'rounded' | 'line'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='TactileHighlight'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|direction|delay|key|ref|className|style|children)$/]",
+        "message": "<TactileHighlight> doesn't accept that prop. Declared props: children, direction, delay."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='TactileHighlight'] > JSXAttribute[name.name='direction'] > Literal[value!=/^(?:left|right|top|bottom)$/]",
+        "message": "<TactileHighlight> direction must be one of 'left' | 'right' | 'top' | 'bottom'."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "AccordionItemData": {
+        "replaces": []
+      },
+      "LabelInput": {
+        "replaces": []
+      },
+      "LogoCarousel": {
+        "replaces": []
+      },
+      "DockItem": {
+        "replaces": []
+      },
+      "NumberTicker": {
+        "replaces": []
+      },
+      "Pagination": {
+        "replaces": []
+      },
+      "RichButton": {
+        "replaces": []
+      },
+      "ShimmerText": {
+        "replaces": []
+      },
+      "Slider": {
+        "replaces": []
+      },
+      "TactileHighlight": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--accent",
+      "--accent-amber",
+      "--accent-blue",
+      "--accent-cyan",
+      "--accent-emerald",
+      "--accent-foreground",
+      "--accent-fuchsia",
+      "--accent-green",
+      "--accent-indigo",
+      "--accent-lime",
+      "--accent-orange",
+      "--accent-pink",
+      "--accent-purple",
+      "--accent-red",
+      "--accent-rose",
+      "--accent-sky",
+      "--accent-teal",
+      "--accent-violet",
+      "--accent-yellow",
+      "--background",
+      "--black",
+      "--border",
+      "--card",
+      "--card-foreground",
+      "--destructive",
+      "--destructive-foreground",
+      "--font-mono",
+      "--font-sans",
+      "--font-serif",
+      "--foreground",
+      "--input",
+      "--leading-relaxed",
+      "--leading-tight",
+      "--muted",
+      "--muted-foreground",
+      "--popover",
+      "--popover-foreground",
+      "--primary",
+      "--primary-foreground",
+      "--radius",
+      "--radius-2xl",
+      "--radius-3xl",
+      "--radius-full",
+      "--radius-lg",
+      "--radius-md",
+      "--radius-sm",
+      "--radius-xl",
+      "--ring",
+      "--secondary",
+      "--secondary-foreground",
+      "--shadow-lg",
+      "--shadow-md",
+      "--shadow-sm",
+      "--shadow-xl",
+      "--space-1",
+      "--space-10",
+      "--space-12",
+      "--space-16",
+      "--space-2",
+      "--space-20",
+      "--space-24",
+      "--space-3",
+      "--space-32",
+      "--space-4",
+      "--space-5",
+      "--space-6",
+      "--space-8",
+      "--text-2xl",
+      "--text-4xl",
+      "--text-6xl",
+      "--text-7xl",
+      "--text-base",
+      "--text-lg",
+      "--text-md",
+      "--text-sm",
+      "--text-xl",
+      "--text-xs",
+      "--tracking-tight",
+      "--tracking-widest",
+      "--white",
+      "--zinc-100",
+      "--zinc-200",
+      "--zinc-300",
+      "--zinc-400",
+      "--zinc-50",
+      "--zinc-500",
+      "--zinc-600",
+      "--zinc-700",
+      "--zinc-800",
+      "--zinc-900",
+      "--zinc-950"
+    ],
+    "tokenKinds": {
+      "--zinc-50": "color",
+      "--zinc-100": "color",
+      "--zinc-200": "color",
+      "--zinc-300": "color",
+      "--zinc-400": "color",
+      "--zinc-500": "color",
+      "--zinc-600": "color",
+      "--zinc-700": "color",
+      "--zinc-800": "color",
+      "--zinc-900": "color",
+      "--zinc-950": "color",
+      "--white": "color",
+      "--black": "color",
+      "--background": "color",
+      "--foreground": "color",
+      "--card": "color",
+      "--card-foreground": "color",
+      "--popover": "color",
+      "--popover-foreground": "color",
+      "--primary": "color",
+      "--primary-foreground": "color",
+      "--secondary": "color",
+      "--secondary-foreground": "color",
+      "--muted": "color",
+      "--muted-foreground": "color",
+      "--accent": "color",
+      "--accent-foreground": "color",
+      "--destructive": "color",
+      "--destructive-foreground": "color",
+      "--border": "color",
+      "--input": "color",
+      "--ring": "color",
+      "--radius": "radius",
+      "--accent-blue": "color",
+      "--accent-purple": "color",
+      "--accent-pink": "color",
+      "--accent-red": "color",
+      "--accent-orange": "color",
+      "--accent-green": "color",
+      "--accent-emerald": "color",
+      "--accent-teal": "color",
+      "--accent-cyan": "color",
+      "--accent-indigo": "color",
+      "--accent-violet": "color",
+      "--accent-rose": "color",
+      "--accent-amber": "color",
+      "--accent-yellow": "color",
+      "--accent-lime": "color",
+      "--accent-sky": "color",
+      "--accent-fuchsia": "color",
+      "--font-sans": "font",
+      "--font-mono": "font",
+      "--font-serif": "font",
+      "--text-xs": "font",
+      "--text-sm": "font",
+      "--text-base": "font",
+      "--text-md": "font",
+      "--text-lg": "font",
+      "--text-xl": "font",
+      "--text-2xl": "font",
+      "--text-4xl": "font",
+      "--text-6xl": "font",
+      "--text-7xl": "font",
+      "--leading-tight": "font",
+      "--leading-relaxed": "font",
+      "--tracking-tight": "font",
+      "--tracking-widest": "font",
+      "--space-1": "spacing",
+      "--space-2": "spacing",
+      "--space-3": "spacing",
+      "--space-4": "spacing",
+      "--space-5": "spacing",
+      "--space-6": "spacing",
+      "--space-8": "spacing",
+      "--space-10": "spacing",
+      "--space-12": "spacing",
+      "--space-16": "spacing",
+      "--space-20": "spacing",
+      "--space-24": "spacing",
+      "--space-32": "spacing",
+      "--radius-sm": "radius",
+      "--radius-md": "radius",
+      "--radius-lg": "radius",
+      "--radius-xl": "radius",
+      "--radius-2xl": "radius",
+      "--radius-3xl": "radius",
+      "--radius-full": "radius",
+      "--shadow-sm": "shadow",
+      "--shadow-md": "shadow",
+      "--shadow-lg": "shadow",
+      "--shadow-xl": "shadow"
+    },
+    "fontFamilies": [
+      "Geist",
+      "Geist Mono"
+    ]
+  }
+}

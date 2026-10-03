@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="_ds/klarden-ui-design-system-be9654ae-7b32-4593-ac52-a0fed39c66fe/styles.css">
+  <script src="_ds/klarden-ui-design-system-be9654ae-7b32-4593-ac52-a0fed39c66fe/_ds_bundle.js"></script>
+  <script src="./image-slot.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;background:#09090b;color:#fafafa;font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+    a{color:#eeca50;text-decoration:none}
+    a:hover{color:#fff3c2}
+    textarea::placeholder{color:#71717a}
+    @keyframes wave{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
+    @keyframes ring{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.18);opacity:0}}
+    @media(max-width:1100px){.hide-sm{display:none!important}}
+    @keyframes chrome{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
+  </style>
+</helmet>
+
+<div style="height:100vh;display:grid;grid-template-rows:56px minmax(0,1fr)">
+  <header style="display:flex;align-items:center;gap:12px;padding:0 16px;min-width:0;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.08);background:#09090b">
+    <a href="CRANE IDE LANDING PAGE.dc.html" style="display:flex;align-items:flex-end;gap:4px">
+      <span style="font-family:Georgia,serif;font-size:38px;line-height:.78;font-weight:700;background:linear-gradient(115deg,#5a3d05 0%,#c6a23a 18%,#fff6cf 30%,#eeca50 42%,#8a6410 56%,#f5d775 70%,#b88a22 88%,#5a3d05 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:chrome 5s ease-in-out infinite">C</span>
+      <span style="font-size:13px;font-weight:700;letter-spacing:.22em;color:#fafafa;padding-bottom:2px">RANE</span>
+      <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.3em;color:#eeca50;padding-bottom:3px;margin-left:4px">BUILDER</span>
+    </a>
+    <div style="width:1px;height:22px;background:rgba(255,255,255,.1)"></div>
+    <button style="display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:10px;background:#111113;border:1px solid rgba(255,255,255,.1);color:#e4e4e7;font:500 13px 'Geist',sans-serif;cursor:pointer;white-space:nowrap">aymani-hair-spa
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"></path></svg>
+    </button>
+    <button style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,.1);color:#d4d4d8;font:500 13px 'Geist',sans-serif;cursor:pointer" style-hover="background:#18181b">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>New</button>
+    <div style="flex:1"></div>
+    <div style="display:flex;padding:3px;border-radius:10px;background:#111113;border:1px solid rgba(255,255,255,.08)">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2">
+        <button onClick="{{ t.go }}" style="height:28px;padding:0 14px;border-radius:7px;border:none;background:{{ t.bg }};color:{{ t.fg }};font:600 12px 'Geist',sans-serif;letter-spacing:.06em;cursor:pointer">{{ t.label }}</button>
+      </sc-for>
+    </div>
+    <div class="hide-sm" style="display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.1);font-family:'Geist Mono',monospace;font-size:11px;color:#d4d4d8;white-space:nowrap">
+      <span style="width:7px;height:7px;border-radius:50%;background:#34d399"></span>berylize-7b · CPU · {{ tps }} tok/s
+    </div>
+    <button style="height:32px;padding:0 14px;border-radius:10px;border:1px solid rgba(255,236,170,.5);background:linear-gradient(138deg,#6c4a08 0%,#c6a23a 24%,#eeca50 50%,#c6a23a 76%,#6c4a08 100%);color:#1a1204;font:700 12px 'Geist',sans-serif;letter-spacing:.1em;cursor:pointer" style-hover="transform:scale(1.03)" style-active="transform:scale(.96)">SHIP</button>
+  </header>
+
+  <div style="display:grid;grid-template-columns:clamp(260px,24vw,400px) minmax(0,1fr) clamp(220px,22vw,380px);min-height:0">
+
+    <aside style="display:flex;flex-direction:column;min-height:0;border-right:1px solid rgba(255,255,255,.08)">
+      <div style="flex:1;overflow:auto;padding:20px 16px;display:flex;flex-direction:column;gap:18px">
+        <sc-for list="{{ msgs }}" as="m" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:{{ m.align }}">
+            <div style="display:flex;align-items:center;gap:6px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:#71717a">
+              <span>{{ m.who }}</span><span>{{ m.via }}</span>
+            </div>
+            <div style="max-width:92%;padding:10px 14px;border-radius:14px;background:{{ m.bg }};border:1px solid {{ m.bd }};font-size:14px;line-height:1.55;color:#e4e4e7;text-wrap:pretty">{{ m.text }}</div>
+            <sc-if value="{{ m.hasSteps }}" hint-placeholder-val="{{ false }}">
+              <div style="width:92%;display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:12px;background:#0e0e10;border:1px solid rgba(255,255,255,.06);font-family:'Geist Mono',monospace;font-size:12px">
+                <sc-for list="{{ m.steps }}" as="s">
+                  <div style="display:flex;align-items:center;gap:8px;color:{{ s.c }}"><span>{{ s.icon }}</span><span>{{ s.t }}</span></div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="padding:12px">
+        <div style="display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:18px;background:#111113;border:1px solid {{ composerBd }};box-shadow:0 10px 30px rgba(0,0,0,.4)">
+          <sc-if value="{{ listening }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:10px;padding:4px 2px">
+              <div style="display:flex;align-items:center;gap:3px;height:22px">
+                <sc-for list="{{ waveBars }}" as="w"><span style="width:3px;height:22px;border-radius:2px;background:#eeca50;transform-origin:center;animation:wave {{ w.d }} ease-in-out {{ w.delay }} infinite"></span></sc-for>
+              </div>
+              <span style="font-size:13px;color:#d4d4d8">Listening… speak your build.</span>
+            </div>
+          </sc-if>
+          <textarea rows="2" value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onKey }}" placeholder="Describe it, or tap the mic and just say it…" style="width:100%;resize:none;background:transparent;border:none;outline:none;color:#fafafa;font:14px/1.5 'Geist',sans-serif"></textarea>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:2px">
+            <sc-for list="{{ tools }}" as="tl" hint-placeholder-count="5">
+              <button title="{{ tl.label }}" style="width:32px;height:32px;display:grid;place-items:center;border-radius:9px;border:none;background:transparent;color:#a1a1aa;cursor:pointer" style-hover="background:#1c1c1f;color:#fafafa">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ tl.d }}"></path></svg>
+              </button>
+            </sc-for>
+            <button class="hide-sm" style="display:flex;align-items:center;gap:4px;height:28px;padding:0 8px;margin-left:4px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:transparent;color:#d4d4d8;font:500 11px 'Geist Mono',monospace;cursor:pointer;white-space:nowrap">berylize-7b
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg></button>
+            <div style="flex:1"></div>
+            <button onClick="{{ toggleMic }}" title="Voice" style="width:34px;height:34px;display:grid;place-items:center;border-radius:50%;border:1px solid {{ micBd }};background:{{ micBg }};color:{{ micFg }};cursor:pointer" style-active="transform:scale(.94)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"></path></svg>
+            </button>
+            <button onClick="{{ send }}" title="Send" style="width:34px;height:34px;margin-left:6px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(255,236,170,.5);background:linear-gradient(138deg,#6c4a08 0%,#c6a23a 24%,#eeca50 50%,#c6a23a 76%,#6c4a08 100%);color:#1a1204;cursor:pointer" style-active="transform:scale(.94)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main style="display:flex;flex-direction:column;min-height:0;background:#0c0c0e;padding:14px;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border-radius:10px;background:#111113;border:1px solid rgba(255,255,255,.08);font-family:'Geist Mono',monospace;font-size:12px;color:#a1a1aa">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"></path></svg>
+        <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">localhost:5173 / aymani-hair-spa</span>
+        <span style="color:#34d399">● live</span>
+      </div>
+      <div style="flex:1;min-height:0;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.08)">
+        <sc-if value="{{ isPreview }}" hint-placeholder-val="{{ true }}">
+          <div style="height:100%;overflow:auto;background:#0d0a08;color:#f1e3d0;font-family:'Geist',sans-serif">
+            <div style="position:relative;min-height:min(100%,560px);display:flex;flex-direction:column;background:#0d0a08 url(uploads/Gemini_Generated_Image_mfycs0mfycs0mfyc.jpeg) center 40%/cover no-repeat">
+              <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(13,10,8,.78) 0%,rgba(13,10,8,.25) 38%,rgba(13,10,8,.92) 100%)"></div>
+              <div style="position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:20px clamp(16px,3vw,36px)">
+                <div style="display:flex;align-items:center;gap:16px"><span style="width:68px;height:68px;border-radius:34px 34px 8px 8px;border:1px solid #e9cf8a;box-shadow:0 0 0 4px rgba(13,10,8,.35),0 0 0 5px rgba(233,207,138,.35),0 8px 30px rgba(0,0,0,.5);background:rgba(13,10,8,.45);display:grid;place-items:center;flex:none"><span style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:46px;line-height:1;background:linear-gradient(135deg,#a8782f,#fff1c4 45%,#c29a45 60%,#a8782f);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">A</span></span><div style="display:flex;flex-direction:column;gap:7px"><span style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(34px,4vw,50px);line-height:.9;letter-spacing:.02em;white-space:nowrap;background:linear-gradient(135deg,#f1e3d0 0%,#fff1c4 40%,#e9cf8a 70%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 2px 10px rgba(0,0,0,.5))">Aymani</span><span style="display:flex;align-items:center;gap:10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.5em;color:#e9cf8a;white-space:nowrap"><span style="width:22px;height:1px;background:#e9cf8a"></span>HAIR SPA</span></div></div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px 20px;font-size:12px;letter-spacing:.06em;color:#e8d8c2"><span>Services</span><span>The Space</span><span>Visit</span></div>
+                <span style="padding:9px 18px;border-radius:999px;border:1px solid #e9cf8a;background:rgba(13,10,8,.4);font-size:12px;color:#f6e2a8;white-space:nowrap">Book now</span>
+              </div>
+              <div style="position:relative;flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:16px;padding:40px clamp(16px,3vw,36px) 36px">
+                <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.26em;color:#f2b8a8">CHALMETTE, LOUISIANA</span>
+                <h2 style="font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:clamp(38px,6vw,84px);line-height:.95;max-width:720px;text-wrap:balance">Where hair becomes <span style="font-style:italic;color:#e9cf8a">ritual.</span></h2>
+                <p style="font-size:14px;line-height:1.6;color:#d9c6ae;max-width:420px">Curl-first cuts, color and silk presses in Chalmette’s newest hair spa — marble, warm light and nowhere to rush.</p>
+                <div style="display:flex;flex-wrap:wrap;gap:10px"><span style="padding:13px 24px;border-radius:999px;background:linear-gradient(138deg,#8a6420,#e9cf8a 50%,#8a6420);color:#1a1204;font-size:13px;font-weight:600">Book a chair</span><span style="padding:13px 24px;border-radius:999px;border:1px solid rgba(241,227,208,.4);font-size:13px">Explore services</span></div>
+              </div>
+            </div>
+
+            <div style="padding:clamp(36px,6vw,72px) clamp(16px,3vw,36px);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:clamp(24px,4vw,56px)">
+              <div style="display:flex;flex-direction:column;gap:12px"><span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.26em;color:#b88a5a">01 — SERVICES</span><h3 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:clamp(28px,3.4vw,44px);line-height:1;text-wrap:balance">Crafted for <span style="font-style:italic;color:#e9cf8a">every texture.</span></h3></div>
+              <div style="display:flex;flex-direction:column">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:14px 0;border-top:1px solid rgba(241,227,208,.12)"><div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-family:'Instrument Serif',serif;font-size:20px;color:#f1e3d0">Silk press</span><span style="font-size:12px;line-height:1.5;color:#a8937c">Smooth, bouncy, heat-protected.</span></div><span style="font-family:'Geist Mono',monospace;font-size:12px;color:#e9cf8a;white-space:nowrap">from $85</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:14px 0;border-top:1px solid rgba(241,227,208,.12)"><div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-family:'Instrument Serif',serif;font-size:20px;color:#f1e3d0">Curl cut &amp; shape</span><span style="font-size:12px;line-height:1.5;color:#a8937c">Dry-cut to your natural pattern.</span></div><span style="font-family:'Geist Mono',monospace;font-size:12px;color:#e9cf8a;white-space:nowrap">from $70</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:14px 0;border-top:1px solid rgba(241,227,208,.12)"><div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-family:'Instrument Serif',serif;font-size:20px;color:#f1e3d0">Color &amp; gloss</span><span style="font-size:12px;line-height:1.5;color:#a8937c">Custom tones, root to tip.</span></div><span style="font-family:'Geist Mono',monospace;font-size:12px;color:#e9cf8a;white-space:nowrap">from $120</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:14px 0;border-top:1px solid rgba(241,227,208,.12)"><div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-family:'Instrument Serif',serif;font-size:20px;color:#f1e3d0">Scalp spa wash</span><span style="font-size:12px;line-height:1.5;color:#a8937c">Massage, steam and deep treatment.</span></div><span style="font-family:'Geist Mono',monospace;font-size:12px;color:#e9cf8a;white-space:nowrap">from $55</span></div>
+                <div style="border-top:1px solid rgba(241,227,208,.12)"></div>
+              </div>
+            </div>
+
+            <div style="padding:0 clamp(16px,3vw,36px) clamp(36px,6vw,72px);display:flex;flex-direction:column;gap:20px">
+              <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.26em;color:#b88a5a">02 — THE SPACE</span>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px">
+                <div style="position:relative;aspect-ratio:4/5;border-radius:16px;overflow:hidden;background:#1a130f url(uploads/Gemini_Generated_Image_mfycs0mfycs0mfyc.jpeg) 8% 78%/auto 230% no-repeat"><div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(13,10,8,.88) 0%,rgba(13,10,8,0) 55%)"></div><div style="position:absolute;left:14px;right:14px;bottom:14px;display:flex;flex-direction:column;gap:2px"><span style="font-family:'Instrument Serif',serif;font-size:20px;color:#f1e3d0">The wash lounge</span><span style="font-size:11px;color:#c9b49c">Heated, reclined, quiet</span></div></div>
+                <div style="position:relative;aspect-ratio:4/5;border-radius:16px;overflow:hidden;background:#1a130f url(uploads/Gemini_Generated_Image_mfycs0mfycs0mfyc.jpeg) 50% 85%/auto 230% no-repeat"><div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(13,10,8,.88) 0%,rgba(13,10,8,0) 55%)"></div><div style="position:absolute;left:14px;right:14px;bottom:14px;display:flex;flex-direction:column;gap:2px"><span style="font-family:'Instrument Serif',serif;font-size:20px;color:#f1e3d0">Styling stations</span><span style="font-size:11px;color:#c9b49c">Lit mirrors, marble floors</span></div></div>
+                <div style="position:relative;aspect-ratio:4/5;border-radius:16px;overflow:hidden;background:#1a130f url(uploads/Gemini_Generated_Image_mfycs0mfycs0mfyc.jpeg) 98% 55%/auto 230% no-repeat"><div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(13,10,8,.88) 0%,rgba(13,10,8,0) 55%)"></div><div style="position:absolute;left:14px;right:14px;bottom:14px;display:flex;flex-direction:column;gap:2px"><span style="font-family:'Instrument Serif',serif;font-size:20px;color:#f1e3d0">The lounge</span><span style="font-size:11px;color:#c9b49c">Wait in velvet, not a waiting room</span></div></div>
+              </div>
+            </div>
+
+            <div style="margin:0 clamp(16px,3vw,36px) clamp(24px,4vw,40px);padding:clamp(24px,4vw,44px);border-radius:20px;border:1px solid rgba(233,207,138,.35);background:linear-gradient(135deg,rgba(184,122,75,.18),rgba(13,10,8,0));display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px">
+              <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Instrument Serif',serif;font-size:clamp(26px,3vw,38px);line-height:1.05">Your chair is <span style="font-style:italic;color:#e9cf8a">waiting.</span></span><span style="font-size:13px;color:#c9b49c">Tue–Sat · 9am–7pm · Chalmette, LA</span></div>
+              <span style="padding:14px 28px;border-radius:999px;background:linear-gradient(138deg,#8a6420,#e9cf8a 50%,#8a6420);color:#1a1204;font-size:14px;font-weight:600;white-space:nowrap">Book your appointment</span>
+            </div>
+            <div style="padding:20px clamp(16px,3vw,36px) 28px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#7a6a58"><span>© 2026 AYMANI HAIR SPA</span><span>CHALMETTE, LA</span></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isCode }}" hint-placeholder-val="{{ false }}">
+          <pre style="height:100%;overflow:auto;margin:0;padding:18px 20px;background:#0a0a0c;font:13px/1.7 'Geist Mono',monospace;color:#d4d4d8">{{ code }}</pre>
+        </sc-if>
+      </div>
+    </main>
+
+    <aside style="display:flex;flex-direction:column;min-height:0;border-left:1px solid rgba(255,255,255,.08);padding:14px;gap:12px">
+      <div style="position:relative;flex:1;min-height:0;border-radius:20px;overflow:hidden;background:#111113;border:1px solid rgba(255,255,255,.08)">
+        <img src="uploads/Gemini_Generated_Image_vazq9dvazq9dvazq.jpeg" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%">
+        <div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(9,9,11,.92) 0%,rgba(9,9,11,0) 40%)"></div>
+        <div style="position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:rgba(9,9,11,.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.1);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.12em;color:#fafafa">
+          <span style="width:6px;height:6px;border-radius:50%;background:#ef4444"></span>LIVE
+        </div>
+        <div style="position:absolute;left:16px;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:3px;height:18px">
+            <sc-for list="{{ agentWave }}" as="w"><span style="width:3px;height:18px;border-radius:2px;background:#fafafa;opacity:.85;transform-origin:center;animation:wave {{ w.d }} ease-in-out {{ w.delay }} infinite"></span></sc-for>
+          </div>
+          <div style="font-size:18px;font-weight:600;letter-spacing:-.01em">Beryl</div>
+          <div style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#a1a1aa">BUILD AGENT · BERYL LABS</div>
+        </div>
+      </div>
+      <div style="padding:12px 14px;border-radius:14px;background:#111113;border:1px solid rgba(255,255,255,.08);font-size:13px;line-height:1.5;color:#d4d4d8;text-wrap:pretty">
+        <span style="font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.14em;color:#71717a;display:block;margin-bottom:4px">SAYING</span>
+        “{{ caption }}”
+      </div>
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px">
+        <button onClick="{{ toggleMic }}" title="Mic" style="width:42px;height:42px;display:grid;place-items:center;border-radius:50%;border:1px solid {{ micBd }};background:{{ micBg }};color:{{ micFg }};cursor:pointer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"></path></svg>
+        </button>
+        <button title="Camera" style="width:42px;height:42px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:#18181b;color:#e4e4e7;cursor:pointer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m22 8-6 4 6 4V8Z"></path><rect x="2" y="6" width="14" height="12" rx="2"></rect></svg>
+        </button>
+        <button title="Share screen" style="width:42px;height:42px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:#18181b;color:#e4e4e7;cursor:pointer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><path d="M8 21h8M12 17v4"></path></svg>
+        </button>
+        <button title="End" style="width:42px;height:42px;display:grid;place-items:center;border-radius:50%;border:none;background:#dc2626;color:#fff;cursor:pointer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    view: 'preview', listening: false, draft: '', tps: 94,
+    msgs: [
+      { me: true, via: 'VOICE', text: 'Build a landing page for Aymani Hair Spa in Chalmette, LA. Dark marble, warm gold, luxurious.' },
+      { me: false, via: '', text: 'On it — dark marble palette, gold accents, serif headline, booking CTA. Scaffolding now.', steps: [['✓', 'Created src/App.tsx', '#a1a1aa'], ['✓', 'Added hero + nav', '#a1a1aa'], ['●', 'Running preview', '#eeca50']] },
+      { me: true, via: 'VOICE', text: 'Show off the salon interior and add services.' },
+      { me: false, via: '', text: 'Done: hero with your salon photo, services & pricing, the space gallery and booking. Want a team section next?' }
+    ]
+  };
+  componentDidMount() {
+    this.t = setInterval(() => this.setState(s => ({ tps: Math.max(62, Math.min(110, s.tps + (Math.random() - .45) * 8)) })), 400);
+  }
+  componentWillUnmount() { clearInterval(this.t); }
+  send = () => {
+    const text = this.state.draft.trim() || (this.state.listening ? 'Add a team section.' : '');
+    if (!text) return;
+    const via = this.state.listening ? 'VOICE' : 'TEXT';
+    this.setState(s => ({ draft: '', listening: false, msgs: s.msgs.concat({ me: true, via, text }) }));
+    setTimeout(() => this.setState(s => ({ msgs: s.msgs.concat({ me: false, via: '', text: 'Got it — building that now. Watch the preview.', steps: [['●', 'Editing src/App.tsx', '#eeca50']] }) })), 700);
+  };
+  renderVals() {
+    const L = this.state.listening;
+    const bars = n => Array.from({ length: n }, (_, i) => ({ d: (0.6 + ((i * 37) % 7) / 10) + 's', delay: (-(i * 0.13)).toFixed(2) + 's' }));
+    
+    return {
+      tps: this.state.tps.toFixed(0),
+      tabs: ['preview', 'code'].map(v => ({ label: v.toUpperCase(), go: () => this.setState({ view: v }), bg: this.state.view === v ? 'linear-gradient(138deg,#6c4a08,#c6a23a 24%,#eeca50 50%,#c6a23a 76%,#6c4a08)' : 'transparent', fg: this.state.view === v ? '#1a1204' : '#a1a1aa' })),
+      isPreview: this.state.view === 'preview', isCode: this.state.view === 'code',
+      code: "export default function App() {\n  return (\n    <main className=\"bg-ink\">\n      <Nav brand=\"Aymani Hair Spa\" links={['Services','The Space','Visit']} />\n      <Hero\n        eyebrow=\"Chalmette, Louisiana\"\n        title=\"Where hair becomes ritual.\"\n        primary=\"Book a chair\"\n        secondary=\"Explore services\"\n      />\n    </main>\n  );\n}",
+      msgs: this.state.msgs.map(m => ({
+        text: m.text, who: m.me ? 'YOU' : 'BERYL', via: m.via ? '· ' + m.via : '',
+        align: m.me ? 'flex-end' : 'flex-start',
+        bg: m.me ? '#1c1c1f' : 'transparent', bd: m.me ? 'rgba(255,255,255,.08)' : 'transparent',
+        hasSteps: !!m.steps, steps: (m.steps || []).map(s => ({ icon: s[0], t: s[1], c: s[2] }))
+      })),
+      listening: L, draft: this.state.draft,
+      onDraft: e => this.setState({ draft: e.target.value }),
+      onKey: e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); } },
+      send: this.send,
+      toggleMic: () => this.setState(s => ({ listening: !s.listening })),
+      micBg: L ? '#eeca50' : '#18181b', micFg: L ? '#1a1204' : '#e4e4e7', micBd: L ? 'rgba(255,236,170,.6)' : 'rgba(255,255,255,.1)',
+      composerBd: L ? 'rgba(238,202,80,.5)' : 'rgba(255,255,255,.1)',
+      waveBars: bars(14), agentWave: bars(22),
+      caption: 'Hi Aymani. You can text me or click the mic and have a real-time live conversation — let\u2019s get it done, girl!',
+      tools: [
+        { label: 'Attach', d: 'm21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5' },
+        { label: 'Image', d: 'M3 5h18v14H3zM3 16l5-5 5 5M14 14l2-2 5 5' },
+        { label: 'Link', d: 'M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7' },
+        { label: 'GitHub', d: 'M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.1-1.3-.3-2.5-1-3.5.3-1.2.3-2.4 0-3.5 0 0-1 0-3 1.5-2.6-.5-5.4-.5-8 0C6 2 5 2 5 2c-.3 1.1-.3 2.3 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.4.5-.7 1-.9 1.6-.2.6-.2 1.3-.1 1.9v4M9 18c-4.5 2-5-2-7-2' },
+        { label: 'Commands', d: 'M4 17l6-6-6-6M12 19h8' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+/* Geist (sans) + Geist Mono — Vercel's typeface, official on Google Fonts since Oct 2024 */
+@import url('https://fonts.googleapis.com/css2?family=Geist:ital,wght@0,100..900;1,100..900&family=Geist+Mono:wght@100..900&display=swap');
+
+:root{
+--font-sans:"Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+--font-mono:"Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", monospace;
+/* the marketing headline pairs the sans with an italic serif accent (system serif, no custom serif shipped in source) */
+--font-serif:ui-serif, Georgia, "Times New Roman", serif;
+
+/* type scale used across docs + landing (px) */
+--text-xs:0.75rem;      /* 12px — nav links, mono labels, badges */
+--text-sm:0.8125rem;    /* 13px — buttons, meta */
+--text-base:0.875rem;   /* 14px — body/accordion content */
+--text-md:1rem;         /* 16px */
+--text-lg:1.125rem;     /* 18px — hero subhead (md+) */
+--text-xl:1.25rem;      /* 20px — nav logo wordmark */
+--text-2xl:1.5rem;
+--text-4xl:2.25rem;     /* 36px — hero, mobile */
+--text-6xl:3.75rem;     /* 60px — hero, desktop */
+--text-7xl:4.5rem;      /* 72px — hero, lg+ */
+
+--leading-tight:1.1;
+--leading-relaxed:1.625;
+
+--tracking-tight:-0.02em;
+--tracking-widest:0.22em; /* pill badges, nav uppercase labels */
+}
