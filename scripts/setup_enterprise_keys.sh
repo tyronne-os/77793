@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# Usage:
-#   bash scripts/setup_enterprise_keys.sh  NGC_ENTERPRISE_KEY  HF_TOKEN
-#
-# Example:
-#   bash scripts/setup_enterprise_keys.sh  nvapi-xxxx  hf_xxxx
+# CRANE · Enterprise NGC + HuggingFace key setup
+# Stops and asks for each token (reads from the keyboard, so it works even if pasted).
 
 ENV_FILE="$HOME/.hermes/.env"
-CRANE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+OC="$HOME/.config/opencode/opencode.jsonc"
+CRANE_DIR="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
+[[ -d "$CRANE_DIR/src/server" ]] || CRANE_DIR="/mnt/elana/ai_apps/crane"
 NIM_BASE="https://integrate.api.nvidia.com/v1"
 
 GRN='\033[0;32m'; RED='\033[0;31m'; YEL='\033[1;33m'; CYN='\033[0;36m'; DIM='\033[2m'; NC='\033[0m'
@@ -15,159 +14,103 @@ bad() { echo -e "${RED}✗${NC}  $*"; }
 hdr() { echo -e "\n${CYN}══ $* ══${NC}"; }
 inf() { echo -e "   ${DIM}$*${NC}"; }
 
-mkdir -p "$(dirname "$ENV_FILE")"
-touch "$ENV_FILE"
-
-NGC_ENT="${1:-}"
-HF_KEY="${2:-}"
-
-if [[ -z "$NGC_ENT" && -z "$HF_KEY" ]]; then
-  echo -e "${YEL}Usage:${NC}"
-  echo "  bash scripts/setup_enterprise_keys.sh  NGC_ENTERPRISE_KEY  HF_TOKEN"
-  echo ""
-  echo "  Both args are optional — pass only what you have:"
-  echo "  bash scripts/setup_enterprise_keys.sh  nvapi-xxxx  ''"
-  echo "  bash scripts/setup_enterprise_keys.sh  ''  hf_xxxx"
-  exit 0
-fi
+mkdir -p "$(dirname "$ENV_FILE")"; touch "$ENV_FILE"
 
 _upsert() {
-  local k="$1" v="$2"
-  if grep -q "^${k}=" "$ENV_FILE" 2>/dev/null; then
-    sed -i "s|^${k}=.*|${k}=${v}|" "$ENV_FILE"
-  else
-    echo "${k}=${v}" >> "$ENV_FILE"
-  fi
+  if grep -q "^$1=" "$ENV_FILE" 2>/dev/null; then sed -i "s|^$1=.*|$1=$2|" "$ENV_FILE"
+  else echo "$1=$2" >> "$ENV_FILE"; fi
+}
+_get() { grep -E "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"'; }
+
+# Ask on the real keyboard. Re-asks until it gets a real value (rejects placeholders).
+# $1=label  $2=hint  $3=var name  $4=allow_blank(1/0)
+ask() {
+  local label="$1" hint="$2" var="$3" blank="${4:-0}" val=""
+  while true; do
+    echo ""
+    echo -e "${CYN}${label}${NC}  ${DIM}${hint}${NC}"
+    printf "      paste here → "
+    IFS= read -rs val < /dev/tty
+    echo ""
+    val="$(echo -n "$val" | tr -d '[:space:]')"
+    if [[ -z "$val" ]]; then
+      if [[ "$blank" == "1" ]]; then echo "      (skipped)"; break; fi
+      bad "Nothing entered — try again."; continue
+    fi
+    if [[ "$val" =~ (PASTE|YOUR_|_HERE|PLACEHOLDER) ]]; then
+      bad "That looks like placeholder text, not a real key — try again."; continue
+    fi
+    echo -e "      ${GRN}✓${NC} received (${#val} chars, starts ${val:0:8}…)"
+    break
+  done
+  printf -v "$var" '%s' "$val"
 }
 
-echo ""
 echo -e "${YEL}╔══════════════════════════════════════════════════════╗${NC}"
 echo -e "${YEL}║  CRANE · Enterprise + HuggingFace key setup         ║${NC}"
 echo -e "${YEL}╚══════════════════════════════════════════════════════╝${NC}"
 
-# ── NGC Enterprise ────────────────────────────────────────────────────────
-if [[ -n "$NGC_ENT" ]]; then
-  hdr "NGC ENTERPRISE KEY"
+NGC_ENT=""; HF_KEY=""
+ask "[1/2] NVIDIA NGC Enterprise key" "(whatever format NVIDIA gave you)" NGC_ENT 0
 
-  if   [[ "$NGC_ENT" == nvapi-* ]];  then FORMAT="nvapi (NIM inference)"
-  elif [[ "$NGC_ENT" == *:* ]];      then FORMAT="user:password (registry)"
-  elif [[ ${#NGC_ENT} -ge 60 ]];     then FORMAT="hex/bearer token"
-  else                                    FORMAT="unknown — trying as Bearer"
-  fi
+EXIST_HF="$(_get HUGGINGFACE_API_KEY)"
+if [[ -n "$EXIST_HF" && ! "$EXIST_HF" =~ (YOUR_|PASTE) ]]; then
+  inf "HuggingFace token already saved (${EXIST_HF:0:8}…) — press Enter to keep it."
+  ask "[2/2] HuggingFace token" "(hf_...)" HF_KEY 1
+  [[ -z "$HF_KEY" ]] && HF_KEY="$EXIST_HF"
+else
+  ask "[2/2] HuggingFace token" "(hf_... from hf.co → Settings → Access Tokens)" HF_KEY 0
+fi
 
-  _upsert "NGC_ENTERPRISE_KEY"     "$NGC_ENT"
-  _upsert "NGC_API_KEY_ENTERPRISE" "$NGC_ENT"
-  ok "Saved NGC_ENTERPRISE_KEY  ($FORMAT)"
+echo -e "\n${GRN}Got both. Saving + testing…${NC}"
 
-  hdr "TESTING NIM ACCESS"
-  TEST=$(curl -sf --max-time 15 "$NIM_BASE/chat/completions" \
-    -H "Authorization: Bearer $NGC_ENT" \
-    -H "Content-Type: application/json" \
-    -d '{"model":"nvidia/llama-3.1-nemotron-70b-instruct","messages":[{"role":"user","content":"Reply: ENT_OK"}],"max_tokens":6,"stream":false}' 2>/dev/null) || TEST=""
+# ── NGC Enterprise ──
+hdr "NGC ENTERPRISE"
+_upsert NGC_ENTERPRISE_KEY "$NGC_ENT"
+_upsert NGC_API_KEY_ENTERPRISE "$NGC_ENT"
+ok "Saved NGC_ENTERPRISE_KEY"
 
-  if [[ -n "$TEST" ]]; then
-    echo "$TEST" | python3 -c "
+CODE=$(curl -s -o /tmp/ngc_ent_test.json -w '%{http_code}' --max-time 25 "$NIM_BASE/chat/completions" \
+  -H "Authorization: Bearer $NGC_ENT" -H "Content-Type: application/json" \
+  -d '{"model":"nvidia/llama-3.1-nemotron-70b-instruct","messages":[{"role":"user","content":"Reply: ENT_OK"}],"max_tokens":6}' 2>/dev/null)
+case "$CODE" in
+  200) ok "NIM accepted the enterprise key (HTTP 200)" ;;
+  401|403) bad "NIM rejected the key (HTTP $CODE) — check it was copied in full" ;;
+  000) inf "NIM test timed out — key saved, retry later" ;;
+  *)   inf "NIM returned HTTP $CODE" ;;
+esac
+rm -f /tmp/ngc_ent_test.json
+
+curl -s --max-time 20 "$NIM_BASE/models" -H "Authorization: Bearer $NGC_ENT" 2>/dev/null | python3 -c "
 import sys,json
 try:
-  d=json.load(sys.stdin)
-  print('✓  NIM responding:', d['choices'][0]['message']['content'][:60])
-except: print('   NIM reached (could not parse response)')
-" 2>/dev/null || ok "NIM reachable"
-  else
-    inf "NIM test timed out — key saved, test manually"
-  fi
+  ids=[m['id'] for m in json.load(sys.stdin).get('data',[])]
+  print(f'   {len(ids)} models visible to this key')
+except Exception: print('   (model list unavailable)')
+" 2>/dev/null
 
-  hdr "ENTERPRISE MODEL CATALOG"
-  MLIST=$(curl -sf --max-time 15 "$NIM_BASE/models" \
-    -H "Authorization: Bearer $NGC_ENT" 2>/dev/null) || MLIST=""
-  if [[ -n "$MLIST" ]]; then
-    echo "$MLIST" | python3 -c "
+# ── HuggingFace ──
+hdr "HUGGINGFACE"
+_upsert HUGGINGFACE_API_KEY "$HF_KEY"
+ok "Saved HUGGINGFACE_API_KEY"
+curl -s --max-time 10 https://huggingface.co/api/whoami -H "Authorization: Bearer $HF_KEY" 2>/dev/null | python3 -c "
 import sys,json
-d=json.load(sys.stdin)
-ids=[m['id'] for m in d.get('data',[])]
-print(f'  {len(ids)} models accessible')
-ent=[m for m in ids if any(x in m.lower() for x in ['nemotron','cosmos','edify','vila','nemo','parakeet','canary'])]
-if ent:
-  print(f'  Enterprise models:')
-  for m in ent[:12]: print(f'    {m}')
-" 2>/dev/null || inf "Model list received"
-  else
-    inf "Model catalog unavailable with this key"
-  fi
+try:
+  d=json.load(sys.stdin); print('   ✓ HF account:', d.get('name','?'), '|', 'Pro' if d.get('isPro') else 'Free')
+except Exception: print('   HF check inconclusive (token saved)')
+" 2>/dev/null
+[[ -f "$OC" ]] && sed -i "s|\"apiKey\": *\"hf_[^\"]*\"|\"apiKey\": \"$HF_KEY\"|g" "$OC" && ok "Updated opencode.jsonc (HF)"
 
-  cat > "$CRANE_DIR/src/server/nim_enterprise_pipelines.json" << EOF
-{
-  "nim-nemotron-340b": {
-    "url": "$NIM_BASE",
-    "model": "nvidia/nemotron-4-340b-instruct",
-    "api_key_env": "NGC_ENTERPRISE_KEY",
-    "concurrency": 2,
-    "label": "NIM Nemotron-4 340B (Enterprise)",
-    "tier": "nim-enterprise"
-  },
-  "nim-nemotron-70b-ent": {
-    "url": "$NIM_BASE",
-    "model": "nvidia/llama-3.1-nemotron-70b-instruct",
-    "api_key_env": "NGC_ENTERPRISE_KEY",
-    "concurrency": 4,
-    "label": "NIM Nemotron 70B (Enterprise key)",
-    "tier": "nim-enterprise"
-  },
-  "nim-parakeet-asr": {
-    "url": "https://ai.api.nvidia.com/v1/asr/nvidia/parakeet-ctc-1-1b",
-    "model": "nvidia/parakeet-ctc-1-1b",
-    "api_key_env": "NGC_ENTERPRISE_KEY",
-    "concurrency": 4,
-    "label": "NIM Parakeet ASR (Enterprise)",
-    "tier": "nim-enterprise"
-  }
-}
-EOF
-  _upsert "CRANE_NIM_ENT_PIPELINES" "$CRANE_DIR/src/server/nim_enterprise_pipelines.json"
-  ok "Written nim_enterprise_pipelines.json"
+# OpenCode enterprise provider: swap env-var reference for the real key so OpenCode can use it
+if [[ -f "$OC" ]]; then
+  sed -i "s|\"apiKey\": *\"\${NGC_ENTERPRISE_KEY}\"|\"apiKey\": \"$NGC_ENT\"|" "$OC" && ok "Wrote enterprise key into opencode.jsonc"
 fi
 
-# ── HuggingFace ───────────────────────────────────────────────────────────
-if [[ -n "$HF_KEY" ]]; then
-  hdr "HUGGINGFACE TOKEN"
-  _upsert "HUGGINGFACE_API_KEY" "$HF_KEY"
-  ok "Saved HUGGINGFACE_API_KEY"
-
-  HF_RESP=$(curl -sf --max-time 10 "https://huggingface.co/api/whoami" \
-    -H "Authorization: Bearer $HF_KEY" 2>/dev/null) || HF_RESP=""
-  if [[ -n "$HF_RESP" ]]; then
-    echo "$HF_RESP" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-print('✓  Account:', d.get('name','?'), '|', 'Pro' if d.get('isPro') else 'Free')
-" 2>/dev/null || ok "HF token accepted"
-  else
-    inf "HF API check inconclusive — token saved"
-  fi
-
-  OC="$HOME/.config/opencode/opencode.jsonc"
-  if [[ -f "$OC" ]]; then
-    sed -i "s|\"apiKey\": *\"hf_[^\"]*\"|\"apiKey\": \"$HF_KEY\"|g" "$OC" && ok "Updated opencode.jsonc" || true
-  fi
-fi
-
-# ── Final status ──────────────────────────────────────────────────────────
 echo ""
-echo -e "${YEL}╔══════════ Key status ════════════════════════════════╗${NC}"
-_chk() {
-  local label="$1" key="$2"
-  local val
-  val=$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"') || val=""
-  if [[ -n "$val" ]]; then
-    printf "  ${GRN}✓${NC}  %-30s ${DIM}%s…${NC}\n" "$label" "${val:0:16}"
-  else
-    printf "  ${RED}✗${NC}  %-30s ${YEL}MISSING${NC}\n" "$label"
-  fi
-}
-_chk "NGC_API_KEY"            "NGC_API_KEY"
-_chk "NGC_ENTERPRISE_KEY"     "NGC_ENTERPRISE_KEY"
-_chk "HUGGINGFACE_API_KEY"    "HUGGINGFACE_API_KEY"
-_chk "TYPESAFE_API_KEY (JEV)" "TYPESAFE_API_KEY"
-_chk "HOSTINGER_EMAIL"        "HOSTINGER_EMAIL"
-_chk "HOSTINGER_SMTP_PASS"    "HOSTINGER_SMTP_PASS"
-echo -e "${YEL}╚══════════════════════════════════════════════════════╝${NC}"
+echo -e "${YEL}══════════ Key status ══════════${NC}"
+for k in NGC_API_KEY NGC_ENTERPRISE_KEY HUGGINGFACE_API_KEY TYPESAFE_API_KEY HOSTINGER_EMAIL HOSTINGER_SMTP_PASS; do
+  v="$(_get $k)"
+  if [[ -n "$v" && ! "$v" =~ (YOUR_|PASTE) ]]; then printf "  ${GRN}✓${NC}  %-24s ${DIM}%s…${NC}\n" "$k" "${v:0:8}"
+  else printf "  ${RED}✗${NC}  %-24s ${YEL}MISSING / placeholder${NC}\n" "$k"; fi
+done
+echo ""
