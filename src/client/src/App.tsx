@@ -17,7 +17,7 @@ import { liveWrite } from "./liveWrite";
 
 type View    = "code" | "preview" | "split";
 type Mode    = "auto" | "plan";
-type NavTab  = "build" | "multi" | "lab" | "suite" | "code" | "backend" | "reports";
+type NavTab  = "suite" | "multi" | "lab" | "code" | "backend" | "reports";
 type Status = { ok: boolean; model: string | null; name?: string; creatives?: string; project: string | null; preview: boolean; mode?: Mode };
 const j = (url: string, body?: unknown, method = body ? "POST" : "GET") =>
   fetch(url, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined })
@@ -25,7 +25,7 @@ const j = (url: string, body?: unknown, method = body ? "POST" : "GET") =>
 
 export default function App() {
   const [view, setView]         = useState<View>("preview");
-  const [navTab, setNavTab]     = useState<NavTab>("build");
+  const [navTab, setNavTab]     = useState<NavTab>("suite");
   const [labOpen, setLabOpen]     = useState(false);
   const [suiteOpen, setSuiteOpen] = useState(false);
   const [codeOpen, setCodeOpen]   = useState(false);
@@ -201,7 +201,6 @@ export default function App() {
         {/* primary tabs */}
         <div className="crane-nav-tabs">
           {([
-            { id: "build",     icon: "🏗️",  label: "BUILD" },
             { id: "suite",     icon: "🧬",  label: "BERYL SUITE" },
             { id: "multi",     icon: "👥",  label: "MULTI-SUITE" },
             { id: "lab",       icon: "🧪",  label: "MODEL LAB" },
