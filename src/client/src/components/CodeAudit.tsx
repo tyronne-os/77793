@@ -8,6 +8,9 @@ import CodePanel from "./CodePanel";
 
 type F = { path: string; size: number };
 const BG = "#0c0614", CARD = "#140a20", BORDER = "#2a1e36", FG = "#ece6f2", MUTED = "#7a7280", GOLD = "#d9b45a", GREEN = "#76b900";
+const PROJECT_NAME = "CRANE IDE";
+const GITHUB_REPO = "tyronne-os/CRANE-IT";
+const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
 const VIRTUAL = [
   { path: "★ pipeline.generated.py", name: "pipeline.generated.py" },
   { path: "★ triage_reports.json", name: "triage_reports.json" },
@@ -22,6 +25,7 @@ export default function CodeAudit({ open, onClose }: { open: boolean; onClose: (
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [err, setErr] = useState("");
   const [redacted, setRedacted] = useState(0);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -47,6 +51,19 @@ export default function CodeAudit({ open, onClose }: { open: boolean; onClose: (
 
   useEffect(() => { if (open) load(active); }, [open, active, load]);
 
+  const downloadZip = async () => {
+    setDownloading(true);
+    try {
+      const r = await fetch("/api/source/download");
+      if (!r.ok) throw new Error(r.statusText);
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "crane-codebase.zip"; a.click();
+      URL.revokeObjectURL(url);
+    } catch { alert("Download failed — check server logs."); }
+    finally { setDownloading(false); }
+  };
+
   const openFile = (p: string) => { setTabs(t => t.includes(p) ? t : [...t, p]); setActive(p); };
   const closeTab = (p: string) => setTabs(t => { const n = t.filter(x => x !== p); if (p === active) setActive(n[n.length - 1] ?? ""); return n; });
 
@@ -66,9 +83,13 @@ export default function CodeAudit({ open, onClose }: { open: boolean; onClose: (
   return (
     <div className="mastering-overlay">
       <div className="bp-overlay-header" style={{ gap: 12 }}>
-        <span className="bp-overlay-title">CODE · AUDIT</span>
+        <span className="bp-overlay-title">{PROJECT_NAME} · CODE AUDIT</span>
+        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: GREEN, textDecoration: "none", fontFamily: "monospace" }}>⎇ {GITHUB_REPO}</a>
         <span style={{ fontSize: 10, color: MUTED }}>read-only · {files.length} project files · secrets redacted{redacted ? ` (${redacted} hidden in this file)` : ""}</span>
         <div style={{ flex: 1 }} />
+        <button onClick={downloadZip} disabled={downloading} style={{ background: "#1e3a1e", border: `1px solid ${GREEN}`, color: GREEN, borderRadius: 5, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontFamily: "monospace" }}>
+          {downloading ? "zipping…" : "⬇ ZIP"}
+        </button>
         <button className="bp-overlay-close" onClick={onClose} aria-label="Close">✕</button>
       </div>
       {err && <div style={{ color: "#ff5d5d", fontSize: 12, padding: 8 }}>{err}</div>}

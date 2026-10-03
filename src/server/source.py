@@ -4,10 +4,13 @@ Secrets are never served: secret-looking files are skipped and key-shaped string
 """
 from __future__ import annotations
 
+import io
 import re
+import zipfile
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 router = APIRouter(prefix="/api/source")
 
@@ -35,6 +38,22 @@ def tree() -> dict:
             if _ok(f):
                 out.append({"path": f.relative_to(ROOT).as_posix(), "size": f.stat().st_size})
     return {"root": ROOT.name, "files": out}
+
+
+@router.get("/download")
+def download_zip() -> StreamingResponse:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for entry in SCAN:
+            base = ROOT / entry
+            files = [base] if base.is_file() else sorted(base.rglob("*")) if base.is_dir() else []
+            for f in files:
+                if _ok(f) and f.stat().st_size <= MAX_BYTES:
+                    text = f.read_text(errors="replace")
+                    zf.writestr(f.relative_to(ROOT).as_posix(), SECRET_VAL.sub("[REDACTED]", text))
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="application/zip",
+                             headers={"Content-Disposition": "attachment; filename=crane-codebase.zip"})
 
 
 @router.get("/file")
