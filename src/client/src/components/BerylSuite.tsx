@@ -293,7 +293,8 @@ export default function BerylSuite({ open, onClose, onCode }: { open: boolean; o
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [downKey, stateKey, open, connected]);
-  useEffect(() => { if (!openIncs.length) return; const t = setInterval(() => setNowT(Date.now()), 1000); return () => clearInterval(t); }, [openIncs.length]);
+  // Timers frozen — clocks show elapsed time at point of last state change; logs remain
+  // useEffect(() => { if (!openIncs.length) return; const t = setInterval(() => setNowT(Date.now()), 1000); return () => clearInterval(t); }, [openIncs.length]);
   // Auto-route bottom panel: triage when red, inspector when all clear
   useEffect(() => {
     if (openIncs.length > 0) { setTab("triage"); setInspOpen(true); }
