@@ -1,0 +1,589 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Beryl Re-Engineering Map</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg-0:#020304;--bg-1:#050608;--bg-2:#0a0c10;
+  --panel:rgba(6,8,12,0.96);--panel-2:rgba(10,13,19,0.9);--panel-border:rgba(90,140,210,0.18);
+  --text:#f4f8ff;--muted:#8fa0b8;--faint:#5a6a82;
+  --accent:#3db4ff;--accent-soft:rgba(61,180,255,0.14);
+  --spark:#f0c14d;--spark-soft:rgba(240,193,77,0.12);--spark-line:rgba(240,193,77,0.55);
+  --ok:#3dde9a;--ok-soft:rgba(61,222,154,0.13);--ok-line:rgba(61,222,154,0.55);
+  --gpu:#a78bfa;--gpu-soft:rgba(167,139,250,0.13);--gpu-line:rgba(167,139,250,0.55);
+  --danger:#ff6b7a;--retired:#5a6a82;--retired-soft:rgba(90,106,130,0.07);
+  --font:"Segoe UI",ui-sans-serif,system-ui,-apple-system,sans-serif;
+  --mono:"Cascadia Code","Consolas",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:
+    radial-gradient(1100px 560px at 12% -8%,rgba(26,140,255,0.10),transparent 58%),
+    radial-gradient(700px 420px at 92% 6%,rgba(240,193,77,0.05),transparent 52%),
+    radial-gradient(650px 460px at 55% 105%,rgba(167,139,250,0.08),transparent 60%),
+    var(--bg-0);
+  color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;
+  padding:26px 16px 44px;min-height:100%;
+}
+.wrap{max-width:1440px;margin:0 auto;display:flex;flex-direction:column;gap:20px;}
+
+.masthead{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;
+  padding-bottom:16px;border-bottom:1px solid var(--panel-border);}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--spark);font-weight:600;margin-bottom:6px;}
+h1{font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:1.2;}
+.sub{color:var(--muted);font-size:13px;margin-top:6px;max-width:74ch;line-height:1.55;}
+
+.panel{border:1px solid var(--panel-border);border-radius:16px;background:var(--panel);
+  box-shadow:0 24px 60px rgba(0,0,0,0.5);overflow:hidden;}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:13px 18px;border-bottom:1px solid var(--panel-border);}
+.panel-head strong{font-size:12px;letter-spacing:.06em;text-transform:uppercase;}
+.panel-scroll{overflow-x:auto;background:radial-gradient(900px 460px at 20% 0%,rgba(26,140,255,0.06),transparent 60%),#010203;}
+svg.diagram{display:block;width:100%;min-width:1080px;height:auto;}
+
+figcaption{font-size:11.5px;color:var(--faint);padding:10px 18px;border-top:1px solid var(--panel-border);
+  background:rgba(0,0,0,0.2);line-height:1.5;}
+
+.legend{display:flex;flex-wrap:wrap;gap:16px;padding:11px 18px;border-top:1px solid var(--panel-border);
+  background:rgba(0,0,0,0.22);font-size:10.5px;color:var(--muted);}
+.legend-item{display:flex;align-items:center;gap:6px;}
+.legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;}
+.card{border:1px solid var(--panel-border);border-radius:14px;background:var(--panel-2);padding:16px 18px;}
+.card h2{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--spark);margin-bottom:9px;}
+.card p{font-size:12.5px;color:var(--muted);line-height:1.6;}
+.card p+p{margin-top:6px;}
+.card code{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,0.04);
+  padding:1px 5px;border-radius:4px;color:var(--accent);}
+
+table.compare{width:100%;border-collapse:collapse;font-size:12px;}
+table.compare th{text-align:left;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--faint);padding:8px 10px;border-bottom:1px solid var(--panel-border);}
+table.compare td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:top;}
+table.compare tr:last-child td{border-bottom:none;}
+.stock{color:var(--muted);}
+.upgrade{color:var(--ok);font-family:var(--mono);font-size:11.5px;}
+.gap-tag{display:inline-block;font-family:var(--mono);font-size:9.5px;color:var(--danger);
+  background:rgba(255,107,122,0.1);border:1px solid rgba(255,107,122,0.3);border-radius:4px;
+  padding:1px 6px;margin-top:3px;}
+
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;align-items:stretch;}
+.flow-step{border:1px solid var(--panel-border);background:var(--panel-2);border-radius:10px;
+  padding:12px 14px;position:relative;}
+.flow-step h3{font-size:11px;color:var(--text);margin-bottom:4px;}
+.flow-step p{font-size:10.5px;color:var(--muted);line-height:1.5;}
+.flow-step .time{font-family:var(--mono);font-size:11px;color:var(--spark);margin-top:6px;display:block;}
+.flow-arrow{display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:16px;
+  padding:0 4px;}
+.path-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);
+  margin-bottom:8px;font-family:var(--mono);}
+
+table.speed{width:100%;border-collapse:collapse;font-size:11.5px;}
+table.speed th{text-align:left;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--faint);padding:7px 9px;border-bottom:1px solid var(--panel-border);}
+table.speed td{padding:7px 9px;border-bottom:1px solid rgba(255,255,255,0.04);}
+table.speed tr:last-child td{border-bottom:none;}
+.t-cold{font-family:var(--mono);color:var(--danger);font-size:11px;}
+.t-warm{font-family:var(--mono);color:var(--ok);font-size:11px;}
+tr.tier-row td{background:rgba(255,255,255,0.02);font-weight:700;color:var(--spark);
+  font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;}
+
+.bn-yes{color:var(--danger);font-family:var(--mono);font-size:10.5px;}
+.bn-partial{color:var(--spark);font-family:var(--mono);font-size:10.5px;}
+.bn-no{color:var(--faint);font-family:var(--mono);font-size:10.5px;}
+.bn-pill{display:inline-block;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px;
+  margin-bottom:3px;}
+.bn-pill.theory{background:rgba(240,193,77,0.1);color:var(--spark);border:1px solid rgba(240,193,77,0.3);}
+.bn-pill.none{background:rgba(90,106,130,0.1);color:var(--faint);border:1px solid rgba(90,106,130,0.3);}
+.bn-pill.proven{background:rgba(61,222,154,0.1);color:var(--ok);border:1px solid rgba(61,222,154,0.3);}
+
+.foot{font-size:11px;color:var(--faint);text-align:center;padding-top:4px;line-height:1.6;}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <div class="eyebrow">Beryl Live Human OS · Re-Engineering Map + Deployment Report</div>
+      <h1>Node arrangement, cold-start strategy, and BitNet impact</h1>
+      <p class="sub">LiveAvatar (Alibaba-Quark, ECCV 2026 Spotlight) ships a render core with no live audio
+        socket, no TTS, no verification, and no affordable single-GPU path. Every node below is either
+        adopted from LiveAvatar directly, or built to close one specific gap in its own published roadmap.
+        Sections below cover instance/model-loading strategy, measured-or-estimated deploy speed per node,
+        and what Microsoft's BitNet quantization can and cannot do to this same pipeline.</p>
+    </div>
+  </header>
+
+  <section class="panel">
+    <div class="panel-head">
+      <strong>Figure 1 — Stock baseline vs. Beryl-engineered pipeline</strong>
+      <span style="font-size:11px;color:var(--faint);font-family:var(--mono);">scroll right on small screens</span>
+    </div>
+    <div class="panel-scroll">
+    <figure>
+    <svg class="diagram" viewBox="0 0 1520 1180" role="img"
+      aria-label="Top band shows LiveAvatar shipped as-is: a single file-in, file-out render core with four unchecked roadmap items — UI streaming, TTS integration, training code, live audio socket. Bottom band shows the Beryl pipeline: mic and ASR feed a brain and a parallel Duplug listening-state model; Qwen3-TTS closes the TTS gap; a new streaming socket wrapper closes the UI gap and feeds audio chunks directly into the adopted LiveAvatar render core running block-wise autoregressive generation; daVinci super-resolution lifts output past the native 704x384; Decider B.B.P verifies every 48-frame block before it streams; an Elana GPU session manager runs the whole render core on spot GPUs billed only while a conversation is active.">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#3db4ff"/>
+        </marker>
+        <marker id="arrow-ok" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#3dde9a"/>
+        </marker>
+        <marker id="arrow-gpu" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#a78bfa"/>
+        </marker>
+        <marker id="arrow-spark" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#f0c14d"/>
+        </marker>
+        <marker id="arrow-retired" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#5a6a82"/>
+        </marker>
+        <pattern id="grid" width="26" height="26" patternUnits="userSpaceOnUse">
+          <path d="M26 0L0 0 0 26" fill="none" stroke="rgba(148,163,184,0.04)" stroke-width="1"/>
+        </pattern>
+        <linearGradient id="glow-core" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="rgba(61,180,255,0.14)"/><stop offset="100%" stop-color="rgba(61,180,255,0.02)"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="1520" height="1180" fill="url(#grid)"/>
+
+      <!-- ============ BAND 1: STOCK LIVEAVATAR ============ -->
+      <text x="26" y="34" fill="#5a6a82" font-size="10.5" font-family="var(--mono)" letter-spacing="2">LIVEAVATAR — SHIPPED AS-IS, v1.1 (2026.01.20)</text>
+
+      <g opacity="0.75">
+        <rect x="26" y="46" width="1468" height="150" rx="14" fill="rgba(90,106,130,0.06)" stroke="#5a6a82" stroke-dasharray="5 5"/>
+        <text x="48" y="76" fill="#f4f8ff" font-size="14" font-weight="700">Wan2.2-S2V-14B + DMD distillation (4-step) + FP8 DiT</text>
+        <text x="48" y="96" fill="#8fa0b8" font-size="10.5" font-family="var(--mono)">audio_path (file) → generate() → .mp4 (file)  ·  704×384  ·  block-wise autoregressive, 48-frame blocks</text>
+        <text x="48" y="114" fill="#8fa0b8" font-size="10.5" font-family="var(--mono)">45 FPS on 5×H800 (multi-GPU)  ·  single-GPU path labeled "offline generation," FPS unmeasured  ·  48GB VRAM floor w/ FP8</text>
+
+        <line x1="48" y1="128" x2="1470" y2="128" stroke="rgba(90,106,130,0.3)"/>
+        <text x="48" y="148" fill="#ff6b7a" font-size="10" font-family="var(--mono)">unchecked on their own roadmap →</text>
+        <rect x="290" y="134" width="150" height="20" rx="4" fill="rgba(255,107,122,0.08)" stroke="rgba(255,107,122,0.3)"/>
+        <text x="365" y="148" text-anchor="middle" fill="#ff6b7a" font-size="9.5" font-family="var(--mono)">⬜ UI streaming</text>
+        <rect x="452" y="134" width="150" height="20" rx="4" fill="rgba(255,107,122,0.08)" stroke="rgba(255,107,122,0.3)"/>
+        <text x="527" y="148" text-anchor="middle" fill="#ff6b7a" font-size="9.5" font-family="var(--mono)">⬜ TTS integration</text>
+        <rect x="614" y="134" width="150" height="20" rx="4" fill="rgba(255,107,122,0.08)" stroke="rgba(255,107,122,0.3)"/>
+        <text x="689" y="148" text-anchor="middle" fill="#ff6b7a" font-size="9.5" font-family="var(--mono)">⬜ live audio socket</text>
+        <rect x="776" y="134" width="150" height="20" rx="4" fill="rgba(255,107,122,0.08)" stroke="rgba(255,107,122,0.3)"/>
+        <text x="851" y="148" text-anchor="middle" fill="#ff6b7a" font-size="9.5" font-family="var(--mono)">⬜ training code</text>
+        <text x="48" y="176" fill="#5a6a82" font-size="10" font-family="var(--mono)">no verification layer · no affordable single-GPU billing model · no resolution uplift past 704×384</text>
+      </g>
+
+      <path d="M 260 196 L 260 234" fill="none" stroke="#5a6a82" stroke-width="1.6" stroke-dasharray="4 4" marker-end="url(#arrow-retired)"/>
+      <text x="272" y="222" fill="#5a6a82" font-size="9.5" font-family="var(--mono)">four gaps close below ↓</text>
+
+      <!-- ============ BAND 2: BERYL RE-ENGINEERED ============ -->
+      <text x="26" y="256" fill="#3db4ff" font-size="10.5" font-family="var(--mono)" letter-spacing="2">BERYL — RE-ENGINEERED PIPELINE</text>
+
+      <!-- Mic -->
+      <g transform="translate(26,278)">
+        <rect width="168" height="88" rx="12" fill="#0a0c10" stroke="rgba(61,222,154,0.5)"/>
+        <text x="12" y="24" fill="#3dde9a" font-size="8.5" font-family="var(--mono)" letter-spacing="1.2">CAPTURE</text>
+        <text x="12" y="44" fill="#f4f8ff" font-size="12.5" font-weight="700">Mic Ingress</text>
+        <text x="12" y="61" fill="#8fa0b8" font-size="9.5">VAD active · 20ms</text>
+        <text x="12" y="76" fill="#5a6a82" font-size="8.5" font-family="var(--mono)">existing · unchanged</text>
+      </g>
+      <line x1="194" y1="322" x2="222" y2="322" stroke="#3db4ff" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+      <!-- Riva ASR -->
+      <g transform="translate(224,278)">
+        <rect width="150" height="88" rx="12" fill="#0a0c10" stroke="rgba(90,140,210,0.18)"/>
+        <text x="12" y="24" fill="#8fa0b8" font-size="8.5" font-family="var(--mono)" letter-spacing="1.2">DATA</text>
+        <text x="12" y="44" fill="#f4f8ff" font-size="12.5" font-weight="700">Riva ASR</text>
+        <text x="12" y="61" fill="#8fa0b8" font-size="9.5">streaming transcript</text>
+        <text x="12" y="76" fill="#5a6a82" font-size="8.5" font-family="var(--mono)">existing · unchanged</text>
+      </g>
+      <line x1="374" y1="322" x2="402" y2="322" stroke="#3db4ff" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+      <!-- Duplug (parallel below) -->
+      <line x1="130" y1="366" x2="130" y2="410" stroke="#3db4ff" stroke-width="1.8" marker-end="url(#arrow)"/>
+      <g transform="translate(26,414)">
+        <rect width="196" height="80" rx="12" fill="#0a0c10" stroke="rgba(61,180,255,0.4)"/>
+        <text x="12" y="22" fill="#7ec8ff" font-size="8.5" font-family="var(--mono)" letter-spacing="1.2">LISTENING STATE</text>
+        <text x="12" y="42" fill="#f4f8ff" font-size="12" font-weight="700">SoulX-Duplug 0.6B</text>
+        <text x="12" y="58" fill="#8fa0b8" font-size="9">idle · nonidle · speak · blank</text>
+        <text x="12" y="72" fill="#5a6a82" font-size="8.5" font-family="var(--mono)">CPU-light · Apache-2.0</text>
+      </g>
+      <path d="M 222 454 C 320 454, 340 380, 400 340" fill="none" stroke="#3db4ff" stroke-width="1.4" marker-end="url(#arrow)"/>
+      <text x="240" y="400" fill="#7ec8ff" font-size="8.5" font-family="var(--mono)">turn-taking signal</text>
+
+      <!-- Brain -->
+      <g transform="translate(404,278)">
+        <rect width="220" height="88" rx="12" fill="#0a0c10" stroke="#3db4ff" stroke-width="1.3"/>
+        <text x="12" y="24" fill="#7ec8ff" font-size="8.5" font-family="var(--mono)" letter-spacing="1.2">DIALOGUE</text>
+        <text x="12" y="44" fill="#f4f8ff" font-size="12.5" font-weight="700">Nemotron + Memory</text>
+        <text x="12" y="61" fill="#8fa0b8" font-size="9.5">policy + episodic recall</text>
+        <text x="12" y="76" fill="#5a6a82" font-size="8.5" font-family="var(--mono)">existing · unchanged</text>
+      </g>
+      <line x1="624" y1="322" x2="652" y2="322" stroke="#3db4ff" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+      <!-- Qwen3-TTS (NEW, closes TTS gap) -->
+      <g transform="translate(654,278)">
+        <rect width="196" height="88" rx="12" fill="url(#glow-core)" stroke="#3dde9a" stroke-width="1.6"/>
+        <rect x="10" y="10" width="130" height="16" rx="8" fill="rgba(61,222,154,0.15)" stroke="rgba(61,222,154,0.5)"/>
+        <text x="75" y="21.5" text-anchor="middle" fill="#3dde9a" font-size="8" font-family="var(--mono)" letter-spacing="1">CLOSES TTS GAP</text>
+        <text x="12" y="46" fill="#f4f8ff" font-size="12.5" font-weight="700">Qwen3-TTS 0.6B</text>
+        <text x="12" y="62" fill="#8fa0b8" font-size="9">CustomVoice · 97ms streaming</text>
+        <text x="12" y="76" fill="#5a6a82" font-size="8.5" font-family="var(--mono)">Apache-2.0 · 10 languages</text>
+      </g>
+      <line x1="850" y1="322" x2="878" y2="322" stroke="#3dde9a" stroke-width="1.8" marker-end="url(#arrow-ok)"/>
+
+      <!-- Streaming Socket Wrapper (NEW, closes UI gap) -->
+      <g transform="translate(880,278)">
+        <rect width="216" height="88" rx="12" fill="url(#glow-core)" stroke="#3dde9a" stroke-width="1.6"/>
+        <rect x="10" y="10" width="150" height="16" rx="8" fill="rgba(61,222,154,0.15)" stroke="rgba(61,222,154,0.5)"/>
+        <text x="85" y="21.5" text-anchor="middle" fill="#3dde9a" font-size="8" font-family="var(--mono)" letter-spacing="1">CLOSES UI + SOCKET GAP</text>
+        <text x="12" y="46" fill="#f4f8ff" font-size="12" font-weight="700">Streaming Socket Wrapper</text>
+        <text x="12" y="62" fill="#8fa0b8" font-size="9">chunks audio → generate() per block</text>
+        <text x="12" y="76" fill="#5a6a82" font-size="8.5" font-family="var(--mono)">new · built in-house</text>
+      </g>
+      <line x1="1096" y1="322" x2="1124" y2="322" stroke="#3dde9a" stroke-width="1.8" marker-end="url(#arrow-ok)"/>
+
+      <!-- LiveAvatar core (ADOPTED, purple-blue) -->
+      <g transform="translate(1126,268)">
+        <rect width="230" height="180" rx="18" fill="url(#glow-core)" stroke="#3db4ff" stroke-width="2"/>
+        <rect x="12" y="12" width="100" height="17" rx="8.5" fill="rgba(61,180,255,0.15)" stroke="rgba(61,180,255,0.5)"/>
+        <text x="62" y="24.5" text-anchor="middle" fill="#7ec8ff" font-size="8.5" font-family="var(--mono)" letter-spacing=".5">ADOPTED</text>
+        <text x="14" y="52" fill="#f4f8ff" font-size="14.5" font-weight="700">LiveAvatar Core</text>
+        <text x="14" y="70" fill="#7ec8ff" font-size="9.5">Wan2.2-S2V-14B · block-wise DiT</text>
+        <text x="14" y="86" fill="#8fa0b8" font-size="9">4-step DMD · streaming VAE · FP8</text>
+        <line x1="0" y1="98" x2="230" y2="98" stroke="rgba(90,140,210,0.2)"/>
+        <text x="14" y="116" fill="#8fa0b8" font-size="9" font-family="var(--mono)">1× L40S 48GB (spot) · Apache-2.0</text>
+        <text x="14" y="132" fill="#8fa0b8" font-size="9" font-family="var(--mono)">48-frame blocks · 704×384 native</text>
+        <rect x="14" y="144" width="200" height="20" rx="5" fill="rgba(240,193,77,0.1)" stroke="rgba(240,193,77,0.4)"/>
+        <text x="114" y="158" text-anchor="middle" fill="#f0c14d" font-size="9" font-family="var(--mono)">FPS/first-frame: bake-off pending</text>
+      </g>
+      <line x1="1356" y1="358" x2="1384" y2="358" stroke="#3db4ff" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+      <!-- daVinci SR (NEW, resolution) -->
+      <g transform="translate(1386,278)">
+        <rect width="106" height="88" rx="12" fill="url(#glow-core)" stroke="#3dde9a" stroke-width="1.6"/>
+        <text x="10" y="20" fill="#3dde9a" font-size="7.5" font-family="var(--mono)" letter-spacing=".5">SR UPLIFT</text>
+        <text x="10" y="40" fill="#f4f8ff" font-size="11" font-weight="700">daVinci SR</text>
+        <text x="10" y="55" fill="#8fa0b8" font-size="8.5">540p/1080p</text>
+        <text x="10" y="69" fill="#8fa0b8" font-size="8.5">post-pass</text>
+        <text x="10" y="81" fill="#5a6a82" font-size="7.5" font-family="var(--mono)">Apache-2.0</text>
+      </g>
+
+      <!-- ============ VERIFICATION BAND (Decider, purple) ============ -->
+      <g>
+        <path d="M 1241 448 C 1180 540, 1000 610, 780 636" fill="none" stroke="#a78bfa" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow-gpu)"/>
+        <path d="M 1439 366 C 1420 500, 1200 600, 800 646" fill="none" stroke="#a78bfa" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrow-gpu)"/>
+      </g>
+      <g transform="translate(440,650)">
+        <rect width="420" height="130" rx="16" fill="rgba(167,139,250,0.05)" stroke="#a78bfa" stroke-width="1.8"/>
+        <rect x="12" y="12" width="160" height="17" rx="8.5" fill="rgba(167,139,250,0.15)" stroke="rgba(167,139,250,0.5)"/>
+        <text x="92" y="24.5" text-anchor="middle" fill="#a78bfa" font-size="8" font-family="var(--mono)" letter-spacing=".5">CLOSES VERIFICATION GAP</text>
+        <text x="14" y="52" fill="#f4f8ff" font-size="13.5" font-weight="700">B.B.P Decider — per-block check</text>
+        <text x="14" y="70" fill="#8fa0b8" font-size="9.5">verifies painted pixels of EACH 48-frame block</text>
+        <text x="14" y="86" fill="#8fa0b8" font-size="9.5">before it streams — not values, not post-hoc</text>
+        <line x1="0" y1="96" x2="420" y2="96" stroke="rgba(167,139,250,0.2)"/>
+        <text x="14" y="114" fill="#a78bfa" font-size="9" font-family="var(--mono)">decider-2b · 4-8.5ms · tyronne-os/decider-plugin-brain-beryl</text>
+      </g>
+      <text x="880" y="700" fill="#a78bfa" font-size="9.5" font-family="var(--mono)">fixes ECC-5 MOTION failure —</text>
+      <text x="880" y="714" fill="#a78bfa" font-size="9.5" font-family="var(--mono)">reads pixels, not transforms</text>
+
+      <!-- ============ INFRA BAND (Elana GPU session mgr, gold) ============ -->
+      <line x1="1241" y1="448" x2="1241" y2="820" stroke="#f0c14d" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.6"/>
+      <g transform="translate(980,830)">
+        <rect width="440" height="150" rx="16" fill="rgba(240,193,77,0.05)" stroke="#f0c14d" stroke-width="1.8"/>
+        <rect x="12" y="12" width="180" height="17" rx="8.5" fill="rgba(240,193,77,0.15)" stroke="rgba(240,193,77,0.5)"/>
+        <text x="102" y="24.5" text-anchor="middle" fill="#f0c14d" font-size="8" font-family="var(--mono)" letter-spacing=".5">CLOSES AFFORDABILITY GAP</text>
+        <text x="14" y="52" fill="#f4f8ff" font-size="13.5" font-weight="700">Elana GPU Session Manager</text>
+        <text x="14" y="70" fill="#8fa0b8" font-size="9.5">spot L40S 48GB, start on first audio frame,</text>
+        <text x="14" y="86" fill="#8fa0b8" font-size="9.5">stop on silence timeout — no idle billing</text>
+        <line x1="0" y1="98" x2="440" y2="98" stroke="rgba(240,193,77,0.2)"/>
+        <text x="14" y="118" fill="#8fa0b8" font-size="9" font-family="var(--mono)">stock LiveAvatar assumption: always-on 48-80GB GPU</text>
+        <text x="14" y="134" fill="#3dde9a" font-size="9.5" font-family="var(--mono)">Beryl: ~$0.31/hr, billed only while someone is talking</text>
+      </g>
+
+      <!-- Output -->
+      <path d="M 1490 366 C 1500 500, 1500 900, 1200 970 C 1000 1020, 500 1030, 280 1000" fill="none" stroke="#3db4ff" stroke-width="1.8" marker-end="url(#arrow)"/>
+      <g transform="translate(26,970)">
+        <rect width="240" height="88" rx="14" fill="#0a0c10" stroke="rgba(61,180,255,0.5)"/>
+        <text x="14" y="24" fill="#7ec8ff" font-size="8.5" font-family="var(--mono)" letter-spacing="1.2">OUTPUT</text>
+        <text x="14" y="46" fill="#f4f8ff" font-size="13" font-weight="700">Elana / Eve UI</text>
+        <text x="14" y="63" fill="#8fa0b8" font-size="9.5">live frame stream + speak audio</text>
+        <text x="14" y="78" fill="#5a6a82" font-size="8.5" font-family="var(--mono)">127.0.0.1:3000 · face/close/mid/wide/turn</text>
+      </g>
+
+    </svg>
+    <figcaption>Figure 1. Top band: LiveAvatar exactly as its own roadmap ships it — a file-in/file-out
+      render core with four checkboxes still unchecked. Bottom band: the same render core, adopted
+      unmodified, wrapped by five new or repositioned components that close those checkboxes one-for-one —
+      TTS, the live socket, per-block verification, and session-based GPU billing.</figcaption>
+    </figure>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><span class="legend-dot" style="background:#5a6a82"></span>stock LiveAvatar — shipped, unmodified</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#3db4ff"></span>existing Beryl signal path</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#3dde9a"></span>new — closes a named roadmap gap</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#a78bfa"></span>B.B.P verification check</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#f0c14d"></span>GPU/infra layer</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><strong>Node roles and what each one re-engineers</strong></div>
+    <div style="padding:16px 18px;overflow-x:auto;">
+    <table class="compare">
+      <tr><th>Node</th><th>Role</th><th>Stock LiveAvatar state</th><th>What Beryl adds</th></tr>
+      <tr>
+        <td><b>SoulX-Duplug 0.6B</b></td>
+        <td>Listening / turn-taking classifier</td>
+        <td class="stock">Not present — LiveAvatar has no concept of listener state<span class="gap-tag">not in scope</span></td>
+        <td class="upgrade">idle/nonidle/speak/blank feeds the brain before it ever calls the render core</td>
+      </tr>
+      <tr>
+        <td><b>Qwen3-TTS 0.6B</b></td>
+        <td>Voice synthesis</td>
+        <td class="stock">Roadmap item<span class="gap-tag">⬜ TTS integration</span></td>
+        <td class="upgrade">97ms streaming latency, Apache-2.0, 9 timbres — feeds audio chunks straight into the wrapper</td>
+      </tr>
+      <tr>
+        <td><b>Streaming Socket Wrapper</b></td>
+        <td>Converts file-based <code>generate()</code> into live mic-in / frame-out</td>
+        <td class="stock">Roadmap item<span class="gap-tag">⬜ UI integration</span></td>
+        <td class="upgrade">chunks live audio into 48-frame blocks, calls the same <code>generate()</code> per block, streams frames as they finish</td>
+      </tr>
+      <tr>
+        <td><b>LiveAvatar Core (adopted)</b></td>
+        <td>Render — block-wise autoregressive avatar video</td>
+        <td class="stock">45 FPS on 5×H800; single-GPU path unmeasured, labeled "offline"</td>
+        <td class="upgrade">unmodified weights, run on 1× spot L40S — the bake-off (LeapTalk vs. this) decides which stays</td>
+      </tr>
+      <tr>
+        <td><b>daVinci SR modules</b></td>
+        <td>Resolution uplift, 540p/1080p</td>
+        <td class="stock">Fixed 704×384 native, no upscale path<span class="gap-tag">not in scope</span></td>
+        <td class="upgrade">Apache-2.0 post-pass, domain-trained on portrait frames, ~1–3GB VRAM</td>
+      </tr>
+      <tr>
+        <td><b>B.B.P Decider</b></td>
+        <td>Per-block verification</td>
+        <td class="stock">No verification layer of any kind<span class="gap-tag">not in scope</span></td>
+        <td class="upgrade">checks painted pixels of every 48-frame block before it streams — the exact fix for the ECC-5 MOTION failure (transform values ≠ pixels)</td>
+      </tr>
+      <tr>
+        <td><b>Elana GPU Session Manager</b></td>
+        <td>Spot-instance lifecycle, cost control</td>
+        <td class="stock">Assumes an always-on 48–80GB GPU<span class="gap-tag">not in scope</span></td>
+        <td class="upgrade">session start on first audio frame, stop on silence — turns "always-warm" into "$0.31/hr while talking"</td>
+      </tr>
+    </table>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="card">
+      <h2>What stays exactly as LiveAvatar shipped it</h2>
+      <p>The Wan2.2-S2V-14B weights, the 4-step DMD distillation, the block-wise autoregressive
+        generation, streaming-VAE, and FP8 quantization are adopted <code>as-is</code>. No fork,
+        no retrain. The only thing that changes around the core is everything the authors themselves
+        left unchecked.</p>
+    </div>
+    <div class="card">
+      <h2>Why per-block verification is new, not incidental</h2>
+      <p>LiveAvatar generates in 48-frame blocks natively — that boundary already exists in the code.
+        B.B.P attaches to it as a checkpoint nothing else in the field has: verify the block before
+        it streams, not the finished clip after. Stock LiveAvatar has no equivalent hook.</p>
+    </div>
+    <div class="card">
+      <h2>The one number that decides the render layer</h2>
+      <p>Everything upstream and downstream of the core (Duplug, TTS, socket, SR, Decider, GPU
+        session manager) is being built either way. What's still open is single-GPU FPS and
+        first-frame latency for LiveAvatar vs. LeapTalk on the same spot L40S — the bake-off spec
+        this diagram sets up.</p>
+    </div>
+  </div>
+
+  <!-- ============ DEPLOYMENT STRATEGY ============ -->
+  <section class="panel">
+    <div class="panel-head"><strong>Deployment strategy — do you create a new instance and download the model every time?</strong></div>
+    <div style="padding:16px 18px;">
+      <p style="font-size:12.5px;color:var(--muted);line-height:1.65;margin-bottom:14px;">
+        Short answer: <b style="color:var(--text)">yes, a compute instance is created — no, the model does not
+        download live.</b> The multi-gigabyte download only ever happens once, when the deployment image is
+        built. Every session after that <i>attaches</i> to pre-loaded weights instead of fetching them —
+        this is the fix for the cold-start problem raised earlier (LiveAvatar's 385ms first-frame delay,
+        LeapTalk's UPON LOAD 3.77s). Two paths, run once vs. run every session:
+      </p>
+
+      <div class="path-label">✕ cold path — happens once, ever, during image build</div>
+      <div class="flow" style="margin-bottom:6px;">
+        <div class="flow-step"><h3>1 · Provision build host</h3><p>Any GPU or CPU box, temporary</p><span class="time">~1–2 min</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><h3>2 · Pull weights from HF/NGC</h3><p>All pipeline models, full-precision + quantized variants</p><span class="time">10–20 min</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><h3>3 · Bake into image / network volume</h3><p>Container layer or persistent attached disk</p><span class="time">2–5 min</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><h3>4 · Push to registry</h3><p>Image or volume snapshot, versioned</p><span class="time">1–3 min</span></div>
+      </div>
+
+      <div class="path-label" style="margin-top:16px;">✓ warm path — happens every real session, this is what billing measures</div>
+      <div class="flow">
+        <div class="flow-step"><h3>1 · Spin up instance</h3><p>Attach the pre-baked image/volume — no download</p><span class="time">~2–8s</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><h3>2 · Load weights → VRAM</h3><p>Disk/NVMe read into GPU memory, not network fetch</p><span class="time">2–40s (size-dependent)</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><h3>3 · Warm-up inference pass</h3><p>Kernel compile, cache fill, first-frame render</p><span class="time">0.4–3s</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><h3>4 · "Hello"</h3><p>Session live, billing clock starts here</p><span class="time">total below ↓</span></div>
+      </div>
+
+      <p style="font-size:11px;color:var(--faint);line-height:1.6;margin-top:14px;">
+        The Elana GPU session manager owns step 1 of the warm path — it's the thing deciding when to attach
+        an instance at all. Network-volume or baked-image storage (RunPod network volumes, Modal/Baseten
+        cached images) is what makes step 1 seconds instead of minutes; without it, every session re-runs
+        the cold path and the "$0.31/hr while talking" math from earlier breaks.</p>
+    </div>
+  </section>
+
+  <!-- ============ DEPLOY SPEED TABLE ============ -->
+  <section class="panel">
+    <div class="panel-head">
+      <strong>Deploy speed, per node — download-to-"hello"</strong>
+      <span style="font-size:10.5px;color:var(--faint);font-family:var(--mono);">estimated from published weight sizes + typical cloud NVMe/network throughput — not vendor-benchmarked</span>
+    </div>
+    <div style="padding:14px 18px;overflow-x:auto;">
+    <table class="speed">
+      <tr><th>Node</th><th>Weights on disk</th><th class="t-cold">Cold — first-ever download + load</th><th class="t-warm">Warm — instance attach + VRAM load only</th></tr>
+      <tr class="tier-row"><td colspan="4">$0.40/hr tier — always-on capable</td></tr>
+      <tr><td>SoulX-Duplug 0.6B</td><td>~1.2 GB</td><td class="t-cold">~15–25s</td><td class="t-warm">~1–2s</td></tr>
+      <tr><td>Qwen3-TTS-1.7B-CustomVoice</td><td>~3.5 GB</td><td class="t-cold">~30–60s</td><td class="t-warm">~2–4s</td></tr>
+      <tr><td>SoulX-FlashHead-1.3B / LeapTalk</td><td>~3–5 GB</td><td class="t-cold">~40–80s</td><td class="t-warm">~3–6s</td></tr>
+      <tr><td>B.B.P Decider-2B</td><td>~4–5 GB</td><td class="t-cold">~45–90s</td><td class="t-warm">~3–5s</td></tr>
+      <tr><td>daVinci SR (540p module)</td><td>~200–500 MB</td><td class="t-cold">~5–10s</td><td class="t-warm">&lt;2s</td></tr>
+      <tr><td colspan="2" style="color:var(--spark);font-family:var(--mono);font-size:10px;">small-tier stack, parallel load</td><td class="t-cold">~2–3 min (sequential worst case)</td><td class="t-warm"><b style="color:var(--ok)">~8–15s</b></td></tr>
+      <tr class="tier-row"><td colspan="4">$0.70–1.50/hr tier — burst on demand</td></tr>
+      <tr><td>Hallo4 (WAN2.1-1.3B + VAE + T5 + audio enc.)</td><td>~10–15 GB</td><td class="t-cold">~2–4 min</td><td class="t-warm">~8–15s</td></tr>
+      <tr><td>LiveAvatar FP8 (Wan2.2-S2V-14B)</td><td>~14 GB</td><td class="t-cold">~3–5 min</td><td class="t-warm">~15–25s</td></tr>
+      <tr><td>LiveAvatar unquantized</td><td>~28 GB</td><td class="t-cold">~6–10 min</td><td class="t-warm">~25–40s</td></tr>
+      <tr><td>B.B.P Decider-35b-a3b (NVFP4)</td><td>~19.6 GB</td><td class="t-cold">~3–6 min</td><td class="t-warm">~15–25s</td></tr>
+    </table>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><span class="legend-dot" style="background:#ff6b7a"></span>cold path — never happens during a live session if images are pre-baked</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#3dde9a"></span>warm path — the real per-session number</div>
+    </div>
+  </section>
+
+  <!-- ============ BITNET IMPACT TABLE ============ -->
+  <section class="panel">
+    <div class="panel-head">
+      <strong>BitNet (microsoft/BitNet) impact on this same pipeline</strong>
+      <span style="font-size:10.5px;color:var(--faint);font-family:var(--mono);">verified against the repo README before scoring each node</span>
+    </div>
+    <div style="padding:14px 18px;">
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px;">
+        BitNet quantizes weights to ~1.58 bits (ternary: −1, 0, +1) instead of FP16's 16 bits — up to
+        ~10× smaller in theory, with Microsoft's own published numbers showing
+        <b style="color:var(--text)">1.37×–6.17× inference speedup and 55–82% energy reduction on CPU</b>.
+        The constraint that matters here: <b style="color:var(--danger)">BitNet requires native training or
+        distillation into the 1.58-bit format — it cannot be applied post-hoc to an existing checkpoint.</b>
+        It's proven on LLMs, embedding models, and one ASR engine (VibeASR.cpp). There is no published
+        evidence of it working on diffusion or video-generation architectures.
+      </p>
+    </div>
+    <div style="padding:0 18px 16px;overflow-x:auto;">
+    <table class="compare">
+      <tr><th>Node</th><th>Architecture</th><th>BitNet status</th><th>What would have to happen</th></tr>
+      <tr>
+        <td><b>Nemotron + Memory (brain)</b></td>
+        <td>LLM (transformer)</td>
+        <td><span class="bn-pill theory">theoretically compatible</span></td>
+        <td class="stock">No BitNet-Nemotron checkpoint exists today — NVIDIA would need to natively retrain it. Not something Beryl can do to an existing model.</td>
+      </tr>
+      <tr>
+        <td><b>B.B.P Decider (2B / 35B-A3B)</b></td>
+        <td>LLM (Qwen3.5 base)</td>
+        <td><span class="bn-pill theory">theoretically compatible</span></td>
+        <td class="stock">Same constraint — the Decider/Qwen team would need to ship a BitNet variant. <code>scripts/train.sh full</code> fine-tunes an existing checkpoint; it does not convert precision format.</td>
+      </tr>
+      <tr>
+        <td><b>Qwen3-TTS (LM backbone)</b></td>
+        <td>LLM-driven TTS</td>
+        <td><span class="bn-pill theory">theoretically compatible</span></td>
+        <td class="stock">No BitNet-TTS release exists. The text/token backbone could in principle be retrained; the vocoder/audio decoder side is unproven regardless.</td>
+      </tr>
+      <tr>
+        <td><b>SenseVoice / Whisper (STT)</b></td>
+        <td>Speech recognition</td>
+        <td><span class="bn-pill proven">closest to proven</span></td>
+        <td class="upgrade">BitNet's own repo lists a proven ASR case (VibeASR.cpp) — but that's a specific BitNet-native ASR model, not a retrofit of Whisper/SenseVoice itself. Swapping to it is a model substitution, not a quantization step.</td>
+      </tr>
+      <tr>
+        <td><b>SoulX-Duplug (listening state)</b></td>
+        <td>Small classifier</td>
+        <td><span class="bn-pill theory">theoretically compatible</span></td>
+        <td class="stock">Already CPU-light at 0.6B — BitNet's real win is on much larger models; the payoff here is marginal even if a variant existed.</td>
+      </tr>
+      <tr>
+        <td><b>SoulX-FlashHead / LeapTalk (render)</b></td>
+        <td>Diffusion transformer</td>
+        <td><span class="bn-pill none">not applicable</span></td>
+        <td class="stock">No diffusion or video-generation model has a published BitNet conversion. Stays at current precision (FP16/lite mode).</td>
+      </tr>
+      <tr>
+        <td><b>LiveAvatar core</b></td>
+        <td>Diffusion transformer (14B DiT)</td>
+        <td><span class="bn-pill none">not applicable</span></td>
+        <td class="stock">Same — this is exactly the architecture class BitNet has never been demonstrated on. FP8 (already in use) is the real lever here, not BitNet.</td>
+      </tr>
+      <tr>
+        <td><b>Hallo4 (render)</b></td>
+        <td>Diffusion transformer (WAN2.1 base)</td>
+        <td><span class="bn-pill none">not applicable</span></td>
+        <td class="stock">Same constraint. DPO-alignment and 1.58-bit quantization are unrelated axes — nothing here blocks pairing FP8 Hallo4 with a future BitNet brain, just not a BitNet Hallo4.</td>
+      </tr>
+      <tr>
+        <td><b>daVinci SR modules</b></td>
+        <td>Convolutional/SR network</td>
+        <td><span class="bn-pill none">not applicable</span></td>
+        <td class="stock">Outside BitNet's demonstrated scope entirely.</td>
+      </tr>
+    </table>
+    </div>
+    <div style="padding:0 18px 18px;">
+      <p style="font-size:11.5px;color:var(--faint);line-height:1.6;">
+        <b style="color:var(--spark)">Net effect on this pipeline today: none, deployably.</b> The VRAM-heavy
+        nodes that actually decide your GPU tier — LiveAvatar, Hallo4, FlashHead/LeapTalk, daVinci SR — are
+        all diffusion/vision architectures, exactly the class BitNet has not been shown to work on. The nodes
+        BitNet <i>could</i> theoretically shrink (Nemotron, Decider, Qwen3-TTS) are comparatively small
+        already (2–9B) and none has a released 1.58-bit checkpoint. BitNet is worth re-checking each time
+        this pipeline is revisited — the repo is active — but it is not a lever available today, and it
+        never touches the render layer regardless, since that's not what BitNet quantizes.</p>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="card">
+      <h2>What stays exactly as LiveAvatar shipped it</h2>
+      <p>The Wan2.2-S2V-14B weights, the 4-step DMD distillation, the block-wise autoregressive
+        generation, streaming-VAE, and FP8 quantization are adopted <code>as-is</code>. No fork,
+        no retrain. The only thing that changes around the core is everything the authors themselves
+        left unchecked.</p>
+    </div>
+    <div class="card">
+      <h2>Why per-block verification is new, not incidental</h2>
+      <p>LiveAvatar generates in 48-frame blocks natively — that boundary already exists in the code.
+        B.B.P attaches to it as a checkpoint nothing else in the field has: verify the block before
+        it streams, not the finished clip after. Stock LiveAvatar has no equivalent hook.</p>
+    </div>
+    <div class="card">
+      <h2>B.B.P Decider — the fork itself</h2>
+      <p><code>tyronne-os/decider-plugin-brain-beryl</code> — fork of Mapika/decider, Apache-2.0,
+        Qwen3.5-2B and 35B-A3B bases, already on GPU. Runs <code>POST /v1/systemone</code>, same
+        endpoint shape as the TypeSafe SDK it replaces. This is the node every verification arrow
+        in the diagram above points back to.</p>
+    </div>
+  </div>
+
+  <p class="foot">Beryl Re-Engineering Map + Deployment Report · v2 · LiveAvatar (Apache-2.0, ECCV 2026 Spotlight) adopted unmodified as render core ·
+    deploy-speed figures are engineering estimates, not vendor benchmarks · BitNet (microsoft/bitnet) verified not applicable to any render-layer node today ·
+    tyronne-os/decider-plugin-brain-beryl</p>
+
+</div>
+
+</body></html>
