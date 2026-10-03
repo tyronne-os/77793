@@ -68,6 +68,12 @@ def _load_jsonc(path: Path) -> dict:
     return json.loads(re.sub(r",(\s*[}\]])", r"\1", text))
 
 
+def _kaggle_first(pls: dict) -> dict:
+    """Kaggle is the default pipeline (32 GB RAM, 2xT4); everything else keeps its order after it."""
+    d = os.environ.get("CRANE_DEFAULT_PIPELINE", "kaggle")
+    return {**({d: pls[d]} if d in pls else {}), **{k: v for k, v in pls.items() if k != d}}
+
+
 def load_pipelines() -> dict[str, dict]:
     pls: dict[str, dict] = {"local": {"url": LLM_URL, "key": API_KEY, "model": DEFAULT_MODEL,
                                       "concurrency": int(os.environ.get("CRANE_AVATAR_CONCURRENCY", "1"))}}
@@ -88,7 +94,7 @@ def load_pipelines() -> dict[str, dict]:
                          "model": cfg["model"], "concurrency": int(cfg.get("concurrency", 1))}
     except Exception:           # noqa: BLE001
         pass
-    return pls
+    return _kaggle_first(pls)
 
 
 _gates: dict[tuple[str, int], asyncio.Semaphore] = {}

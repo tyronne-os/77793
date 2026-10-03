@@ -6,6 +6,8 @@ import BackendPanel from "./components/BackendPanel";
 import GpuMeter from "./components/GpuMeter";
 import MasteringPanel from "./components/MasteringPanel";
 import MultiSuitePanel from "./components/MultiSuitePanel";
+import ModelLab from "./components/ModelLab";
+import BerylSuite from "./components/BerylSuite";
 import PodmanPanel from "./components/PodmanPanel";
 import VaultPanel from "./components/VaultPanel";
 import PreviewPanel, { PreviewHandle } from "./components/PreviewPanel";
@@ -15,7 +17,7 @@ import { liveWrite } from "./liveWrite";
 
 type View    = "code" | "preview" | "split";
 type Mode    = "auto" | "plan";
-type NavTab  = "build" | "mastering" | "multi" | "backend" | "reports";
+type NavTab  = "build" | "mastering" | "multi" | "lab" | "suite" | "backend" | "reports";
 type Status = { ok: boolean; model: string | null; name?: string; creatives?: string; project: string | null; preview: boolean; mode?: Mode };
 const j = (url: string, body?: unknown, method = body ? "POST" : "GET") =>
   fetch(url, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined })
@@ -24,6 +26,8 @@ const j = (url: string, body?: unknown, method = body ? "POST" : "GET") =>
 export default function App() {
   const [view, setView]         = useState<View>("preview");
   const [navTab, setNavTab]     = useState<NavTab>("build");
+  const [labOpen, setLabOpen]     = useState(false);
+  const [suiteOpen, setSuiteOpen] = useState(false);
   const [status, setStatus]     = useState<Status | null>(null);
   const [mode, setMode] = useState<Mode>("auto");
   const [projects, setProjects] = useState<string[]>([]);
@@ -198,8 +202,10 @@ export default function App() {
         <div className="crane-nav-tabs">
           {([
             { id: "build",     icon: "🏗️",  label: "BUILD" },
+            { id: "suite",     icon: "🧬",  label: "BERYL SUITE" },
             { id: "mastering", icon: "🎙️",  label: "MASTERING" },
             { id: "multi",     icon: "👥",  label: "MULTI-SUITE" },
+            { id: "lab",       icon: "🧪",  label: "MODEL LAB" },
             { id: "backend",   icon: "⚙️",  label: "BACKEND" },
             { id: "reports",   icon: "📊",  label: "REPORTS" },
           ] as { id: NavTab; icon: string; label: string }[]).map(t => (
@@ -208,6 +214,8 @@ export default function App() {
                 setNavTab(t.id);
                 if (t.id === "mastering") setMasteringOpen(true);
                 if (t.id === "multi")     setMultiOpen(true);
+                if (t.id === "lab")       setLabOpen(true);
+                if (t.id === "suite")     setSuiteOpen(true);
                 if (t.id === "backend")   setBackendOpen(true);
               }}>
               <span className="crane-nav-icon">{t.icon}</span>
@@ -246,6 +254,8 @@ export default function App() {
       </nav>
       <GpuMeter open={gpuOpen} onClose={() => setGpuOpen(false)} />
       <BackendPanel open={backendOpen} onClose={() => { setBackendOpen(false); if (navTab === "backend") setNavTab("build"); }} />
+      <BerylSuite open={suiteOpen} onClose={() => { setSuiteOpen(false); if (navTab === "suite") setNavTab("build"); }} />
+      <ModelLab open={labOpen} onClose={() => { setLabOpen(false); if (navTab === "lab") setNavTab("build"); }} />
       <MultiSuitePanel open={multiOpen} onClose={() => { setMultiOpen(false); if (navTab === "multi") setNavTab("build"); }} />
       <MasteringPanel open={masteringOpen} onClose={() => { setMasteringOpen(false); if (navTab === "mastering") setNavTab("build"); }} />
       <PodmanPanel open={podmanOpen} onClose={() => setPodmanOpen(false)} />
