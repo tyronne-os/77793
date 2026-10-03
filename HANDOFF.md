@@ -58,6 +58,15 @@
 8. Mirror Loop (IPS) and Omniverse (OV) show red/DOWN locally because nothing listens on 8020/8030. Correct behaviour.
 9. The old MASTERING tab (JEV face cues) is separate and not merged into the Suite.
 
+### ✅ CONFIRMED FIX — page reverting to old UI (2026-10-03)
+
+**Root cause:** `:8000` serves a prebuilt static bundle (`src/server/static/`). Every front-end code change only takes effect on `:8004` (Vite hot-reload) until you rebuild. If the bundle is stale, `:8000` shows the old version and a hard refresh or direct visit to `:8000` brings back deleted panels.
+
+**Rule going forward (DO NOT SKIP):**
+1. **Start the API with:** `bash scripts/start_crane_api.sh` — this loads `~/.hermes/.env` first so NGC_ENTERPRISE_KEY is set. Never start uvicorn directly.
+2. **After any UI change:** `cd src/client && npx vite build` — this rebuilds `src/server/static/` from the current source. Until this runs, `:8000` is stale.
+3. `:8004` is always current (Vite dev). `:8000` only matches after a rebuild. Use `:8004` for live development.
+
 ---
 
 ## CURRENT STATE (what works RIGHT NOW)
