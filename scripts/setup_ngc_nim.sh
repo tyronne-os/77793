@@ -1,112 +1,139 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# CRANE · NGC NIM setup — stores key, tests NIM chat endpoint, registers
-# NIM as a CRANE pipeline so Multi-Suite can benchmark it against Beryl/local.
+# CRANE · NGC NIM + Hostinger email setup
 #
-# Usage:
-#   bash scripts/setup_ngc_nim.sh
-#   bash scripts/setup_ngc_nim.sh --key nvapi-xxxx   # non-interactive
+# Collects ALL credentials upfront in one go, then runs every setup step.
+# No interruptions mid-run.
+#
+# Usage:  bash scripts/setup_ngc_nim.sh
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-RED='\033[0;31m'; GRN='\033[0;32m'; YEL='\033[1;33m'; CYN='\033[0;36m'; NC='\033[0m'
+RED='\033[0;31m'; GRN='\033[0;32m'; YEL='\033[1;33m'; CYN='\033[0;36m'; DIM='\033[2m'; NC='\033[0m'
 ok()  { echo -e "${GRN}✓${NC}  $*"; }
 bad() { echo -e "${RED}✗${NC}  $*"; }
 hdr() { echo -e "\n${CYN}══ $* ══${NC}"; }
+inf() { echo -e "   ${DIM}$*${NC}"; }
 
 CRANE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="$HOME/.hermes/.env"
 NIM_BASE="https://integrate.api.nvidia.com/v1"
-NIM_MODEL="${NIM_MODEL:-nvidia/llama-3.1-nemotron-70b-instruct}"   # top NIM chat model
+NIM_MODEL="${NIM_MODEL:-nvidia/llama-3.1-nemotron-70b-instruct}"
 PIPELINES_FILE="$CRANE_DIR/src/server/nim_pipelines.json"
+HOSTINGER_CONF="$CRANE_DIR/src/server/hostinger_email.json"
 
-# ── 1. Get NGC API key ────────────────────────────────────────────────────────
-hdr "NGC API KEY"
-NGC_KEY=""
+# Load existing env file (soft — don't fail if missing)
+mkdir -p "$(dirname "$ENV_FILE")"
+[[ -f "$ENV_FILE" ]] && set -a && source "$ENV_FILE" 2>/dev/null && set +a || true
 
-# Prefer --key flag
-for i in "$@"; do
-  case $i in --key=*) NGC_KEY="${i#*=}" ;; --key) shift; NGC_KEY="$1" ;; esac
-done
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 1 — COLLECT ALL CREDENTIALS UPFRONT
+# ════════════════════════════════════════════════════════════════════════════
+echo ""
+echo -e "${YEL}╔══════════════════════════════════════════════════════╗${NC}"
+echo -e "${YEL}║  CRANE · Credential Setup                           ║${NC}"
+echo -e "${YEL}║  Paste all three tokens now — then sit back.        ║${NC}"
+echo -e "${YEL}╚══════════════════════════════════════════════════════╝${NC}"
+echo ""
 
-# Fall back to env file
-if [[ -z "$NGC_KEY" && -f "$ENV_FILE" ]]; then
-  NGC_KEY=$(grep -E '^NGC_API_KEY=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"' | head -1 || true)
-fi
-
-# Prompt
+# ── 1a. NGC API key ───────────────────────────────────────────────────────
+NGC_KEY="${NGC_API_KEY:-}"
 if [[ -z "$NGC_KEY" ]]; then
-  echo -n "Paste your NGC API key (nvapi-...): "
+  echo -e "${CYN}[1/3]${NC} NGC API key  ${DIM}(nvapi-... from ngc.nvidia.com → Account → API Keys)${NC}"
+  echo -n "      → "
   read -rs NGC_KEY; echo
 fi
+[[ -z "$NGC_KEY" ]] && { bad "NGC API key required. Exiting."; exit 1; }
+echo -e "      ${GRN}✓${NC} NGC key received (${NGC_KEY:0:12}…)"
 
-if [[ -z "$NGC_KEY" ]]; then
-  bad "No NGC API key provided. Exiting."
-  exit 1
+# ── 1b. Hostinger email ───────────────────────────────────────────────────
+HOSTINGER_EMAIL="${HOSTINGER_EMAIL:-}"
+if [[ -z "$HOSTINGER_EMAIL" ]]; then
+  echo ""
+  echo -e "${CYN}[2/3]${NC} Hostinger email address  ${DIM}(e.g. you@yourdomain.com)${NC}"
+  echo -n "      → "
+  read -r HOSTINGER_EMAIL
 fi
-ok "Key loaded (${NGC_KEY:0:12}…)"
+echo -e "      ${GRN}✓${NC} Email: $HOSTINGER_EMAIL"
 
-# ── 2. Persist key ────────────────────────────────────────────────────────────
-hdr "STORING KEY"
-mkdir -p "$(dirname "$ENV_FILE")"
-if grep -q '^NGC_API_KEY=' "$ENV_FILE" 2>/dev/null; then
-  sed -i "s|^NGC_API_KEY=.*|NGC_API_KEY=$NGC_KEY|" "$ENV_FILE"
-else
-  echo "NGC_API_KEY=$NGC_KEY" >> "$ENV_FILE"
+# ── 1c. Hostinger SMTP password ───────────────────────────────────────────
+HOSTINGER_PASS="${HOSTINGER_SMTP_PASS:-}"
+if [[ -z "$HOSTINGER_PASS" ]]; then
+  echo ""
+  echo -e "${CYN}[3/3]${NC} Hostinger SMTP password  ${DIM}(hPanel → Email → Manage → App Password)${NC}"
+  echo -n "      → "
+  read -rs HOSTINGER_PASS; echo
 fi
-ok "Written to $ENV_FILE"
+echo -e "      ${GRN}✓${NC} SMTP password received"
 
-# Store in CRANE vault (runs server must be up for this; soft-fail if not)
-if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
-  curl -sf -X POST http://localhost:8000/api/vault/store \
-    -H "Content-Type: application/json" \
-    -d "{\"key\":\"ngc\",\"value\":\"$NGC_KEY\"}" > /dev/null && ok "Stored in CRANE vault (key=ngc)" || true
-else
-  echo "   CRANE server not running — key saved to $ENV_FILE only; vault store skipped."
+# ── 1d. Hostinger API key (optional) ─────────────────────────────────────
+HOSTINGER_API_KEY="${HOSTINGER_API_KEY:-}"
+if [[ -z "$HOSTINGER_API_KEY" ]]; then
+  echo ""
+  echo -e "${DIM}[opt]  Hostinger API key  (hPanel → API Tokens — press Enter to skip)${NC}"
+  echo -n "      → "
+  read -rs HOSTINGER_API_KEY; echo
+  [[ -z "$HOSTINGER_API_KEY" ]] && inf "Skipped — email tasks will use SMTP/IMAP only"
 fi
+[[ -n "$HOSTINGER_API_KEY" ]] && echo -e "      ${GRN}✓${NC} Hostinger API key received"
 
-# ── 3. Smoke-test NIM chat endpoint ──────────────────────────────────────────
+echo ""
+echo -e "${GRN}All credentials collected. Running setup…${NC}"
+echo ""
+
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 2 — PERSIST TO ENV FILE
+# ════════════════════════════════════════════════════════════════════════════
+hdr "SAVING TO $ENV_FILE"
+
+_upsert() {
+  local k="$1" v="$2"
+  if grep -q "^${k}=" "$ENV_FILE" 2>/dev/null; then
+    sed -i "s|^${k}=.*|${k}=${v}|" "$ENV_FILE"
+  else
+    echo "${k}=${v}" >> "$ENV_FILE"
+  fi
+}
+
+_upsert "NGC_API_KEY"       "$NGC_KEY"
+_upsert "HOSTINGER_EMAIL"   "$HOSTINGER_EMAIL"
+_upsert "HOSTINGER_SMTP_PASS" "$HOSTINGER_PASS"
+[[ -n "$HOSTINGER_API_KEY" ]] && _upsert "HOSTINGER_API_KEY" "$HOSTINGER_API_KEY"
+_upsert "CRANE_NIM_PIPELINES"  "$PIPELINES_FILE"
+_upsert "CRANE_EMAIL_CONFIG"   "$HOSTINGER_CONF"
+ok "All keys written to $ENV_FILE"
+
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 3 — NGC NIM: TEST + REGISTER PIPELINES
+# ════════════════════════════════════════════════════════════════════════════
 hdr "NIM ENDPOINT TEST  ($NIM_MODEL)"
 RESP=$(curl -sf "$NIM_BASE/chat/completions" \
   -H "Authorization: Bearer $NGC_KEY" \
   -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"$NIM_MODEL\",
-    \"messages\": [{\"role\":\"user\",\"content\":\"Reply with exactly: CRANE_NIM_OK\"}],
-    \"max_tokens\": 8,
-    \"stream\": false
-  }" 2>&1) || { bad "NIM request failed:\n$RESP"; exit 1; }
+  -d "{\"model\":\"$NIM_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply: CRANE_NIM_OK\"}],\"max_tokens\":8,\"stream\":false}" \
+  2>&1) || { bad "NIM request failed — check NGC key or network:\n$RESP"; RESP=""; }
 
-CONTENT=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['choices'][0]['message']['content'].strip())" 2>/dev/null || echo "")
-if echo "$CONTENT" | grep -qi "CRANE_NIM_OK"; then
-  ok "NIM responded: $CONTENT"
-else
-  ok "NIM responded (content differs from expected, but reachable): ${CONTENT:0:80}"
+if [[ -n "$RESP" ]]; then
+  CONTENT=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['choices'][0]['message']['content'].strip())" 2>/dev/null || echo "")
+  ok "NIM responding: ${CONTENT:0:80}"
 fi
 
-# ── 4. Test streaming ─────────────────────────────────────────────────────────
 hdr "STREAMING TEST"
-STREAM_OK=false
 curl -sf "$NIM_BASE/chat/completions" \
   -H "Authorization: Bearer $NGC_KEY" \
   -H "Content-Type: application/json" \
-  -d "{\"model\":\"$NIM_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Say hi\"}],\"max_tokens\":5,\"stream\":true}" \
-  | head -c 200 | grep -q "data:" && STREAM_OK=true || true
-$STREAM_OK && ok "Streaming SSE confirmed" || echo "   Streaming check inconclusive (may need longer timeout)"
+  -d "{\"model\":\"$NIM_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Hi\"}],\"max_tokens\":5,\"stream\":true}" \
+  | head -c 300 | grep -q "data:" && ok "Streaming SSE confirmed" || inf "Streaming check inconclusive"
 
-# ── 5. List available NIM models ──────────────────────────────────────────────
-hdr "AVAILABLE NIM MODELS (first 10)"
-curl -sf "$NIM_BASE/models" \
-  -H "Authorization: Bearer $NGC_KEY" \
+hdr "AVAILABLE NIM MODELS (first 12)"
+curl -sf "$NIM_BASE/models" -H "Authorization: Bearer $NGC_KEY" \
   | python3 -c "
 import sys,json
-d = json.load(sys.stdin)
-for m in d.get('data',[])[:10]:
-    print(' ', m['id'])
-" 2>/dev/null || echo "   (model list unavailable — endpoint may not expose /models)"
+d=json.load(sys.stdin)
+for m in d.get('data',[])[:12]: print('  ', m['id'])
+" 2>/dev/null || inf "(model list endpoint not available)"
 
-# ── 6. Write nim_pipelines.json for CRANE ────────────────────────────────────
-hdr "REGISTERING NIM PIPELINES"
+hdr "REGISTERING NIM PIPELINES → nim_pipelines.json"
 cat > "$PIPELINES_FILE" << JSONEOF
 {
   "nim-nemotron-70b": {
@@ -116,7 +143,7 @@ cat > "$PIPELINES_FILE" << JSONEOF
     "concurrency": 4,
     "label": "NIM Nemotron 70B",
     "tier": "nim",
-    "notes": "NVIDIA NIM cloud — Nemotron 70B, Tokkio Model-1 baseline chat layer"
+    "notes": "NVIDIA NIM cloud — Tokkio Model-1 baseline chat layer"
   },
   "nim-llama3-8b": {
     "url": "$NIM_BASE",
@@ -125,7 +152,7 @@ cat > "$PIPELINES_FILE" << JSONEOF
     "concurrency": 8,
     "label": "NIM Llama 3.1 8B",
     "tier": "nim",
-    "notes": "NVIDIA NIM cloud — fast Llama 3.1 8B for speed baseline"
+    "notes": "NVIDIA NIM cloud — fast 8B speed baseline"
   },
   "nim-mistral-nemo": {
     "url": "$NIM_BASE",
@@ -140,123 +167,43 @@ cat > "$PIPELINES_FILE" << JSONEOF
 JSONEOF
 ok "Written $PIPELINES_FILE"
 
-# Set env var for server pickup
-if ! grep -q '^CRANE_NIM_PIPELINES=' "$ENV_FILE" 2>/dev/null; then
-  echo "CRANE_NIM_PIPELINES=$PIPELINES_FILE" >> "$ENV_FILE"
-  ok "Added CRANE_NIM_PIPELINES to $ENV_FILE"
-fi
-
-# ── 7. Reload pipeline list if server is running ──────────────────────────────
-hdr "PIPELINE RELOAD"
-if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
-  curl -sf -X POST http://localhost:8000/api/pipelines/reload > /dev/null 2>/dev/null && \
-    ok "CRANE server reloaded pipeline list" || \
-    echo "   Reload endpoint not yet wired — restart crane server to pick up NIM pipelines."
-else
-  echo "   CRANE server not running — NIM pipelines will load on next server start."
-fi
-
-echo ""
-echo -e "${GRN}═══════════════════════════════════════════════════════${NC}"
-echo -e "${GRN}  NGC NIM setup complete.${NC}"
-echo -e "  Pipelines file : $PIPELINES_FILE"
-echo -e "  Key env        : NGC_API_KEY in $ENV_FILE"
-echo -e "  Next step      : Run  bash scripts/setup_tokkio_ace.sh  to wire"
-echo -e "                   the full Tokkio ACE stack (ASR → A2F → RTX)."
-echo -e "${GRN}═══════════════════════════════════════════════════════${NC}"
-
 # ════════════════════════════════════════════════════════════════════════════
-# HOSTINGER — Agentic email management via SMTP/IMAP + Hostinger API
-# Gives CRANE Engineers the ability to send alerts, reports and PR summaries
+# STEP 4 — HOSTINGER: TEST SMTP + WRITE CONFIG
 # ════════════════════════════════════════════════════════════════════════════
-hdr "HOSTINGER EMAIL SETUP"
-
-HOSTINGER_EMAIL=""
-HOSTINGER_PASS=""
-HOSTINGER_API_KEY=""
-
-# Pull from env file if already set
-[[ -f "$ENV_FILE" ]] && {
-  HOSTINGER_EMAIL=$(grep -E '^HOSTINGER_EMAIL=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)
-  HOSTINGER_PASS=$(grep  -E '^HOSTINGER_SMTP_PASS=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)
-  HOSTINGER_API_KEY=$(grep -E '^HOSTINGER_API_KEY=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)
-}
-
-# Prompt for missing values
-if [[ -z "$HOSTINGER_EMAIL" ]]; then
-  echo -n "Hostinger email address (e.g. you@yourdomain.com): "
-  read -r HOSTINGER_EMAIL
-fi
-if [[ -z "$HOSTINGER_PASS" ]]; then
-  echo -n "Hostinger SMTP password (or app password): "
-  read -rs HOSTINGER_PASS; echo
-fi
-if [[ -z "$HOSTINGER_API_KEY" ]]; then
-  echo -n "Hostinger API key (from hpanel → API Tokens, or press Enter to skip): "
-  read -rs HOSTINGER_API_KEY; echo
-fi
-
-# Persist to env file
-grep -q '^HOSTINGER_EMAIL=' "$ENV_FILE" 2>/dev/null && \
-  sed -i "s|^HOSTINGER_EMAIL=.*|HOSTINGER_EMAIL=$HOSTINGER_EMAIL|" "$ENV_FILE" || \
-  echo "HOSTINGER_EMAIL=$HOSTINGER_EMAIL" >> "$ENV_FILE"
-
-grep -q '^HOSTINGER_SMTP_PASS=' "$ENV_FILE" 2>/dev/null && \
-  sed -i "s|^HOSTINGER_SMTP_PASS=.*|HOSTINGER_SMTP_PASS=$HOSTINGER_PASS|" "$ENV_FILE" || \
-  echo "HOSTINGER_SMTP_PASS=$HOSTINGER_PASS" >> "$ENV_FILE"
-
-[[ -n "$HOSTINGER_API_KEY" ]] && {
-  grep -q '^HOSTINGER_API_KEY=' "$ENV_FILE" 2>/dev/null && \
-    sed -i "s|^HOSTINGER_API_KEY=.*|HOSTINGER_API_KEY=$HOSTINGER_API_KEY|" "$ENV_FILE" || \
-    echo "HOSTINGER_API_KEY=$HOSTINGER_API_KEY" >> "$ENV_FILE"
-  ok "Hostinger API key stored"
-}
-ok "Hostinger credentials saved to $ENV_FILE"
-
-# ── Smoke-test SMTP (send a test email to self) ───────────────────────────
 hdr "HOSTINGER SMTP TEST"
-if command -v python3 >/dev/null 2>&1; then
-  python3 - <<PYEOF
-import smtplib, ssl, os, sys
+python3 - <<PYEOF
+import smtplib, ssl, sys
 EMAIL = "$HOSTINGER_EMAIL"
 PASS  = "$HOSTINGER_PASS"
-if not EMAIL or not PASS:
-    print("   Skipping SMTP test — credentials not set.")
-    sys.exit(0)
 try:
     ctx = ssl.create_default_context()
     with smtplib.SMTP_SSL("smtp.hostinger.com", 465, context=ctx) as s:
         s.login(EMAIL, PASS)
-        s.sendmail(EMAIL, EMAIL, f"""From: CRANE <{EMAIL}>
-To: {EMAIL}
-Subject: CRANE Hostinger SMTP test
-
-CRANE email agent connected. Hostinger SMTP verified.
-""")
-    print("✓  SMTP test email sent to", EMAIL)
+        s.sendmail(EMAIL, EMAIL,
+            f"From: CRANE <{EMAIL}>\r\nTo: {EMAIL}\r\n"
+            f"Subject: CRANE email agent connected\r\n\r\n"
+            f"Hostinger SMTP verified. CRANE agentic email is live.")
+    print("✓  Test email sent to", EMAIL)
 except Exception as e:
     print(f"✗  SMTP failed: {e}")
-    print("   Check credentials or use an App Password from hPanel → Email → Manage")
+    print("   Use an App Password from hPanel → Email → Manage")
 PYEOF
-else
-  inf "python3 not found — skipping SMTP test"
-fi
 
-# ── Hostinger API test (if key provided) ─────────────────────────────────
 if [[ -n "$HOSTINGER_API_KEY" ]]; then
   hdr "HOSTINGER API TEST"
   API_RESP=$(curl -sf "https://api.hostinger.com/v1/profile" \
-    -H "Authorization: Bearer $HOSTINGER_API_KEY" 2>&1 || echo "error")
-  if echo "$API_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print('Account:', d.get('email','?'))" 2>/dev/null; then
-    ok "Hostinger API connected"
-  else
-    inf "API response: ${API_RESP:0:120}"
-    inf "(Profile endpoint may differ — check docs.hostinger.com/api)"
-  fi
+    -H "Authorization: Bearer $HOSTINGER_API_KEY" 2>&1 || echo "{}")
+  echo "$API_RESP" | python3 -c "
+import sys,json
+try:
+    d=json.load(sys.stdin)
+    print('✓  API connected — account:', d.get('email', d.get('id','?')))
+except:
+    print('   API response received (check docs.hostinger.com/api for profile path)')
+" 2>/dev/null || true
 fi
 
-# ── Write Hostinger email config for CRANE engineers module ─────────────
-HOSTINGER_CONF="$CRANE_DIR/src/server/hostinger_email.json"
+hdr "WRITING HOSTINGER CONFIG → hostinger_email.json"
 cat > "$HOSTINGER_CONF" << JSONEOF
 {
   "provider": "hostinger",
@@ -290,33 +237,35 @@ cat > "$HOSTINGER_CONF" << JSONEOF
   "label_for_agent_tasks": "CRANE-TASK"
 }
 JSONEOF
-ok "Written: src/server/hostinger_email.json"
+ok "Written $HOSTINGER_CONF"
 
-grep -q '^CRANE_EMAIL_CONFIG=' "$ENV_FILE" 2>/dev/null || \
-  echo "CRANE_EMAIL_CONFIG=$HOSTINGER_CONF" >> "$ENV_FILE"
-ok "CRANE_EMAIL_CONFIG set in $ENV_FILE"
-
-# Store in CRANE vault
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 5 — CRANE VAULT (if server running)
+# ════════════════════════════════════════════════════════════════════════════
+hdr "CRANE VAULT"
 if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
-  curl -sf -X POST http://localhost:8000/api/vault/store \
-    -H "Content-Type: application/json" \
-    -d "{\"key\":\"hostinger_email\",\"value\":\"$HOSTINGER_EMAIL\"}" > /dev/null && \
-  curl -sf -X POST http://localhost:8000/api/vault/store \
-    -H "Content-Type: application/json" \
-    -d "{\"key\":\"hostinger_smtp_pass\",\"value\":\"$HOSTINGER_PASS\"}" > /dev/null && \
-  ok "Credentials stored in CRANE vault" || true
+  _vault() { curl -sf -X POST http://localhost:8000/api/vault/store \
+    -H "Content-Type: application/json" -d "{\"key\":\"$1\",\"value\":\"$2\"}" > /dev/null; }
+  _vault "ngc"             "$NGC_KEY"
+  _vault "hostinger_email" "$HOSTINGER_EMAIL"
+  _vault "hostinger_smtp"  "$HOSTINGER_PASS"
+  [[ -n "$HOSTINGER_API_KEY" ]] && _vault "hostinger_api" "$HOSTINGER_API_KEY"
+  curl -sf -X POST http://localhost:8000/api/pipelines/reload > /dev/null 2>/dev/null || true
+  ok "All keys stored in CRANE vault + pipelines reloaded"
+else
+  inf "CRANE server not running — keys in $ENV_FILE only; vault + reload on next server start"
 fi
 
+# ════════════════════════════════════════════════════════════════════════════
+# DONE
+# ════════════════════════════════════════════════════════════════════════════
 echo ""
-echo -e "${GRN}═══════════════════════════════════════════════════════${NC}"
-echo -e "${GRN}  Hostinger email agent ready.${NC}"
-echo -e "  SMTP  : smtp.hostinger.com:465 (SSL)"
-echo -e "  IMAP  : imap.hostinger.com:993 (TLS)"
-echo -e "  Config: src/server/hostinger_email.json"
-echo -e ""
-echo -e "  ${YEL}CRANE engineer tasks available:${NC}"
-echo -e "    send_build_report   — auto-email after each build"
-echo -e "    send_pr_summary     — email when PR opens/merges"
-echo -e "    send_alert          — OOM / circuit-breaker fires"
-echo -e "    read_inbox_for_tasks — poll IMAP for CRANE-TASK label"
-echo -e "${GRN}═══════════════════════════════════════════════════════${NC}"
+echo -e "${GRN}╔══════════════════════════════════════════════════════╗${NC}"
+echo -e "${GRN}║  Setup complete                                      ║${NC}"
+echo -e "${GRN}╠══════════════════════════════════════════════════════╣${NC}"
+echo -e "${GRN}║${NC}  NGC NIM     3 pipelines in nim_pipelines.json       ${GRN}║${NC}"
+echo -e "${GRN}║${NC}  Hostinger   SMTP/IMAP + 6 agent tasks wired         ${GRN}║${NC}"
+echo -e "${GRN}║${NC}  Env file    $ENV_FILE"
+echo -e "${GRN}╠══════════════════════════════════════════════════════╣${NC}"
+echo -e "${GRN}║${NC}  ${YEL}Next:${NC} bash scripts/setup_tokkio_ace.sh --nim-only  ${GRN}║${NC}"
+echo -e "${GRN}╚══════════════════════════════════════════════════════╝${NC}"

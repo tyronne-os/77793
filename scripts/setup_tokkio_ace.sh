@@ -31,12 +31,22 @@ for arg in "$@"; do
 done
 
 # Load env
-[[ -f "$ENV_FILE" ]] && set -a && source "$ENV_FILE" && set +a || true
+mkdir -p "$(dirname "$ENV_FILE")"
+[[ -f "$ENV_FILE" ]] && set -a && source "$ENV_FILE" 2>/dev/null && set +a || true
 NGC_KEY="${NGC_API_KEY:-}"
 
+# Prompt if not set — no hard exit, user can run this script standalone
 if [[ -z "$NGC_KEY" ]]; then
-  bad "NGC_API_KEY not set. Run:  bash scripts/setup_ngc_nim.sh  first."
-  exit 1
+  echo -e "\n${CYN}NGC API key not found in $ENV_FILE${NC}"
+  echo -e "${DIM}(Get it from ngc.nvidia.com → Account → API Keys)${NC}"
+  echo -n "Paste NGC API key (nvapi-...): "
+  read -rs NGC_KEY; echo
+  [[ -z "$NGC_KEY" ]] && { bad "NGC API key required. Exiting."; exit 1; }
+  # Persist so setup_tokkio_ace re-runs don't need to prompt again
+  grep -q '^NGC_API_KEY=' "$ENV_FILE" 2>/dev/null && \
+    sed -i "s|^NGC_API_KEY=.*|NGC_API_KEY=$NGC_KEY|" "$ENV_FILE" || \
+    echo "NGC_API_KEY=$NGC_KEY" >> "$ENV_FILE"
+  ok "Key saved to $ENV_FILE"
 fi
 
 NIM_BASE="https://integrate.api.nvidia.com/v1"
