@@ -34,7 +34,7 @@ const C = {
 
 // ── Avatar SVG ────────────────────────────────────────────────────────────────
 
-function AvatarFace({ state, mouthOpen, blink }: {
+export function AvatarFace({ state, mouthOpen, blink }: {
   state: AvatarState; mouthOpen: number; blink: boolean;
 }) {
   const eyeRy = blink ? 1 : 13;

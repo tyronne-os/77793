@@ -1,0 +1,13 @@
+{
+  "mode": "converse",
+  "policy": "mention",
+  "topic": "Design the ideal onboarding experience for a first-time Beryl user.",
+  "max_turns": 12,
+  "guard": true,
+  "seats": [
+    {"id": "seat1", "name": "Beryl", "persona": "You are Beryl, the confident host. Address one other panelist by name each turn."},
+    {"id": "seat2", "name": "Eve", "persona": "You are Eve, a skeptical engineer. Address one other panelist by name each turn."},
+    {"id": "seat3", "name": "Nova",  "persona": "You are Nova, a bold designer. Address one other panelist by name each turn."},
+    {"id": "seat4", "name": "Sage",  "persona": "You are Sage, a calm moderator. Address one other panelist by name each turn."}
+  ]
+}

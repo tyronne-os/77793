@@ -5,6 +5,7 @@ import FileTree, { TreeItem } from "./components/FileTree";
 import BackendPanel from "./components/BackendPanel";
 import GpuMeter from "./components/GpuMeter";
 import MasteringPanel from "./components/MasteringPanel";
+import MultiSuitePanel from "./components/MultiSuitePanel";
 import PodmanPanel from "./components/PodmanPanel";
 import VaultPanel from "./components/VaultPanel";
 import PreviewPanel, { PreviewHandle } from "./components/PreviewPanel";
@@ -14,7 +15,7 @@ import { liveWrite } from "./liveWrite";
 
 type View    = "code" | "preview" | "split";
 type Mode    = "auto" | "plan";
-type NavTab  = "build" | "mastering" | "backend" | "reports";
+type NavTab  = "build" | "mastering" | "multi" | "backend" | "reports";
 type Status = { ok: boolean; model: string | null; name?: string; creatives?: string; project: string | null; preview: boolean; mode?: Mode };
 const j = (url: string, body?: unknown, method = body ? "POST" : "GET") =>
   fetch(url, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined })
@@ -42,6 +43,7 @@ export default function App() {
   const [gpuOpen, setGpuOpen]           = useState(false);
   const [backendOpen, setBackendOpen]   = useState(false);
   const [masteringOpen, setMasteringOpen] = useState(false);
+  const [multiOpen, setMultiOpen] = useState(false);
   const [vaultOpen, setVaultOpen]       = useState(false);
   const preview = useRef<PreviewHandle>(null);
   const activeRef = useRef(active); activeRef.current = active;
@@ -197,6 +199,7 @@ export default function App() {
           {([
             { id: "build",     icon: "🏗️",  label: "BUILD" },
             { id: "mastering", icon: "🎙️",  label: "MASTERING" },
+            { id: "multi",     icon: "👥",  label: "MULTI-SUITE" },
             { id: "backend",   icon: "⚙️",  label: "BACKEND" },
             { id: "reports",   icon: "📊",  label: "REPORTS" },
           ] as { id: NavTab; icon: string; label: string }[]).map(t => (
@@ -204,6 +207,7 @@ export default function App() {
               onClick={() => {
                 setNavTab(t.id);
                 if (t.id === "mastering") setMasteringOpen(true);
+                if (t.id === "multi")     setMultiOpen(true);
                 if (t.id === "backend")   setBackendOpen(true);
               }}>
               <span className="crane-nav-icon">{t.icon}</span>
@@ -242,6 +246,7 @@ export default function App() {
       </nav>
       <GpuMeter open={gpuOpen} onClose={() => setGpuOpen(false)} />
       <BackendPanel open={backendOpen} onClose={() => { setBackendOpen(false); if (navTab === "backend") setNavTab("build"); }} />
+      <MultiSuitePanel open={multiOpen} onClose={() => { setMultiOpen(false); if (navTab === "multi") setNavTab("build"); }} />
       <MasteringPanel open={masteringOpen} onClose={() => { setMasteringOpen(false); if (navTab === "mastering") setNavTab("build"); }} />
       <PodmanPanel open={podmanOpen} onClose={() => setPodmanOpen(false)} />
       <VaultPanel open={vaultOpen} onClose={() => setVaultOpen(false)} />

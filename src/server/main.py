@@ -19,12 +19,14 @@ import terminal
 import vault
 import coderag
 import mcp_server
+import multiavatar
 from files import WS
 
 app = FastAPI(title="CRANE")
 app.include_router(knowledge.router)
 app.include_router(coderag.router)
 app.include_router(mcp_server.router)
+app.include_router(multiavatar.router)
 STATIC = Path(__file__).parent / "static"
 ALLOWED_HOSTS = {"localhost", "127.0.0.1"}   # the terminal socket is a shell: loopback origins only
 
@@ -210,6 +212,16 @@ async def ws_avatar_chat(ws: WebSocket):
     except WebSocketDisconnect:
         if current:
             current.cancel()
+
+
+@app.websocket("/ws/multi-avatar")
+async def ws_multi_avatar(ws: WebSocket):
+    """Multi-seat avatar conversations: 1-4 avatars talk to each other (see multiavatar.py)."""
+    if not origin_ok(ws):
+        return await ws.close(code=1008)
+    await ws.accept()
+    gpu.ping()
+    await multiavatar.run_session(ws)
 
 
 @app.websocket("/ws/rag-chat")

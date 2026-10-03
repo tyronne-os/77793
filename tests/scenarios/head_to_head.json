@@ -1,0 +1,8 @@
+{
+  "mode": "arena",
+  "topic": "Explain in two sentences why low latency matters for a live conversational avatar.",
+  "seats": [
+    {"id": "a", "name": "Local-3B",  "pipeline": "local",  "temperature": 0.3},
+    {"id": "b", "name": "Kaggle-GPU", "pipeline": "kaggle", "temperature": 0.3}
+  ]
+}
