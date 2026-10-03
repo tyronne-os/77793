@@ -107,6 +107,8 @@ export default function BerylSuite({ open, onClose, onCode }: { open: boolean; o
   const saved = useMemo(() => store.get(), []);
   const [shape, setShape] = useState(saved.shape || "circle");
   const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const drag = useRef<{ down: boolean; sx: number; sy: number; px: number; py: number }>({ down: false, sx: 0, sy: 0, px: 0, py: 0 });
   const [stage, setStage] = useState(saved.stage ?? 1);
   const [sel, setSel] = useState("agt");
   const [pick, setPick] = useState<Record<string, string>>(saved.pick || {});     // node id -> model name
@@ -572,15 +574,21 @@ if __name__ == "__main__":
             <button style={btn(true)} onClick={testAll}>TEST ALL</button>
           </div>
 
-          <div ref={wrapRef} style={{ position: "relative", overflow: "hidden", minHeight: 0, background: "radial-gradient(circle at 50% 40%, #150d22, #09060f 70%)" }}>
+          <div ref={wrapRef}
+            style={{ position: "relative", overflow: "hidden", minHeight: 0, background: "radial-gradient(circle at 50% 40%, #150d22, #09060f 70%)", cursor: drag.current.down ? "grabbing" : "grab" }}
+            onWheel={e => { e.preventDefault(); const delta = e.deltaY < 0 ? 0.1 : -0.1; setZoom(z => Math.max(0.15, Math.min(3, +(z + delta).toFixed(2)))); }}
+            onMouseDown={e => { if (e.button !== 0) return; drag.current = { down: true, sx: e.clientX, sy: e.clientY, px: pan.x, py: pan.y }; }}
+            onMouseMove={e => { if (!drag.current.down) return; setPan({ x: drag.current.px + e.clientX - drag.current.sx, y: drag.current.py + e.clientY - drag.current.sy }); }}
+            onMouseUp={() => { drag.current.down = false; }}
+            onMouseLeave={() => { drag.current.down = false; }}>
             <div style={{ position: "absolute", top: 8, right: 10, zIndex: 3, display: "flex", gap: 6 }}>
               {SHAPES.map(s => <button key={s[0]} style={{ ...btn(shape === s[0]), padding: "3px 9px" }} onClick={() => setShape(s[0])}>{s[1]} {s[2]}</button>)}
               <button style={{ ...btn(), padding: "3px 9px" }} onClick={() => setZoom(z => Math.max(0.4, +(z - 0.1).toFixed(1)))}>−</button>
               <span style={{ ...lbl, alignSelf: "center" }}>{Math.round(zoom * 100)}%</span>
               <button style={{ ...btn(), padding: "3px 9px" }} onClick={() => setZoom(z => Math.min(2, +(z + 0.1).toFixed(1)))}>+</button>
-              <button style={{ ...btn(), padding: "3px 9px" }} onClick={() => setZoom(1)}>Fit</button>
+              <button style={{ ...btn(), padding: "3px 9px" }} onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>Fit</button>
             </div>
-            <div style={{ position: "absolute", left: "50%", top: "50%", width: LP.W, height: LP.H, transform: `translate(-50%,-50%) scale(${sc})`, transformOrigin: "center" }}>
+            <div style={{ position: "absolute", left: "50%", top: "50%", width: LP.W, height: LP.H, transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${sc})`, transformOrigin: "center" }}>
               <svg width={LP.W} height={LP.H} style={{ position: "absolute", inset: 0 }}>
                 {E.filter(e => byId[e[0]].stage <= stage && byId[e[1]].stage <= stage).map((e, i) => {
                   const [ax, ay] = LP.P[e[0]], [bx, by] = LP.P[e[1]]; const dx = bx - ax, dy = by - ay, horiz = Math.abs(dx) >= Math.abs(dy);
