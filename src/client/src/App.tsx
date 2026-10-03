@@ -159,7 +159,7 @@ export default function App() {
     <div className="app">
       {/* ── top bar ──────────────────────────────────────────────────────── */}
       <header className="top">
-        <div className="brand"><span className="mark">🏗️</span> CRANE <small>BUILDER</small></div>
+        <div className="brand"><span className="mark">🏗️</span> CRANE-IT <small>V1</small></div>
         <div className="proj">
           {naming
             ? <NewProject onCreate={createProject} onCancel={() => setNaming(false)} />

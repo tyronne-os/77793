@@ -8,8 +8,8 @@ import CodePanel from "./CodePanel";
 
 type F = { path: string; size: number };
 const BG = "#0c0614", CARD = "#140a20", BORDER = "#2a1e36", FG = "#ece6f2", MUTED = "#7a7280", GOLD = "#d9b45a", GREEN = "#76b900";
-const PROJECT_NAME = "CRANE IDE";
-const GITHUB_REPO = "tyronne-os/CRANE-IT";
+const PROJECT_NAME = "CRANE-IT V1";
+const GITHUB_REPO = "tyronne-os/CRANE-IT-V1";
 const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
 const VIRTUAL = [
   { path: "★ pipeline.generated.py", name: "pipeline.generated.py" },

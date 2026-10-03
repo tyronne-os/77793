@@ -604,7 +604,7 @@ if __name__ == "__main__":
                   <div key={n.id} onClick={() => setSel(n.id)} style={{ position: "absolute", left: x - 100, top: y - 62, width: 200, opacity: on ? 1 : 0.28, cursor: "pointer",
                     border: `2px solid ${down ? RED : picked ? "#f6d775" : k[2] + "88"}`, background: down ? "#2a0a10" : "#120b1d", borderRadius: 12, padding: 12,
                     boxShadow: down ? `0 0 26px ${RED}99, inset 0 0 14px ${RED}33` : picked ? "0 0 22px rgba(246,215,117,.35)" : "none" }}>
-                    <div style={{ fontSize: 8, letterSpacing: ".25em", color: "#5d5468", fontFamily: "monospace", marginBottom: 3 }}>CRANE</div>
+                    <div style={{ fontSize: 8, letterSpacing: ".25em", color: "#5d5468", fontFamily: "monospace", marginBottom: 3 }}>CRANE-IT V1</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{ fontSize: 12, fontFamily: "monospace", background: k[1], color: k[2], padding: "1px 7px", borderRadius: 4 }}>{n.tag}</span>
                       <span style={{ flex: 1 }} /><span style={{ fontSize: 11, fontFamily: "monospace", fontWeight: down ? 800 : 400, color: down ? RED : st[1] }}>{st[0]}</span></div>

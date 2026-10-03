@@ -1,4 +1,4 @@
-# CRANE Session Handoff — Updated 2026-10-03 (see SESSION UPDATE below)
+# CRANE-IT V1 Session Handoff — Updated 2026-10-03
 
 **Next agent: read this top-to-bottom. Everything you need is here.**
 
@@ -57,6 +57,13 @@
 7. Live-reload UI dev: `cd src/client && npx vite` serves :8004 and proxies /api and /ws to :8000. Production UI is `npm run build` (output to `src/server/static`, `assets/` is gitignored).
 8. Mirror Loop (IPS) and Omniverse (OV) show red/DOWN locally because nothing listens on 8020/8030. Correct behaviour.
 9. The old MASTERING tab (JEV face cues) is separate and not merged into the Suite.
+
+### ✅ REPO RENAMED — CRANE-IT → CRANE-IT-V1 (2026-10-03)
+
+- GitHub: https://github.com/tyronne-os/CRANE-IT-V1
+- All UI updated: app title = "CRANE-IT V1", node watermark = "CRANE-IT V1", CodeAudit header = "CRANE-IT V1"
+- `src/server/static/` is now **gitignored** — the stale prebuilt bundle that caused old UI to reappear is gone from the repo
+- Fresh clone: run `cd src/client && npx vite build` once before using port 8000
 
 ### ✅ CONFIRMED FIX — page reverting to old UI (2026-10-03)
 
