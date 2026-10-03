@@ -44,8 +44,8 @@ mkdir -p "$TMPDIR"
 echo "[berylize] Starting vLLM $MODEL on port $PORT"
 echo "[berylize] VRAM budget: 23 GB L4 | AWQ INT4 ~18 GB | max-model-len 16384"
 
-python3 -m vllm.entrypoints.openai.api_server \
-  --model "$MODEL" \
+export PYTHONWARNINGS=ignore
+vllm serve "$MODEL" \
   --quantization awq \
   --port "$PORT" \
   --host 0.0.0.0 \

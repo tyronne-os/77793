@@ -4,6 +4,7 @@ import CodePanel from "./components/CodePanel";
 import FileTree, { TreeItem } from "./components/FileTree";
 import BackendPanel from "./components/BackendPanel";
 import GpuMeter from "./components/GpuMeter";
+import MasteringPanel from "./components/MasteringPanel";
 import PodmanPanel from "./components/PodmanPanel";
 import VaultPanel from "./components/VaultPanel";
 import PreviewPanel, { PreviewHandle } from "./components/PreviewPanel";
@@ -11,16 +12,18 @@ import TerminalPanel from "./components/TerminalPanel";
 import { useSocket } from "./hooks/useSocket";
 import { liveWrite } from "./liveWrite";
 
-type View = "code" | "preview" | "split";
-type Mode = "auto" | "plan";
+type View    = "code" | "preview" | "split";
+type Mode    = "auto" | "plan";
+type NavTab  = "build" | "mastering" | "backend" | "reports";
 type Status = { ok: boolean; model: string | null; name?: string; creatives?: string; project: string | null; preview: boolean; mode?: Mode };
 const j = (url: string, body?: unknown, method = body ? "POST" : "GET") =>
   fetch(url, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined })
     .then(async (r) => { if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? r.statusText); return r.json(); });
 
 export default function App() {
-  const [view, setView] = useState<View>("preview");            // opens on the live preview
-  const [status, setStatus] = useState<Status | null>(null);
+  const [view, setView]         = useState<View>("preview");
+  const [navTab, setNavTab]     = useState<NavTab>("build");
+  const [status, setStatus]     = useState<Status | null>(null);
   const [mode, setMode] = useState<Mode>("auto");
   const [projects, setProjects] = useState<string[]>([]);
   const [project, setProject] = useState<string | null>(null);
@@ -36,9 +39,10 @@ export default function App() {
   const [termOpen, setTermOpen] = useState(false);
   const [podmanOpen, setPodmanOpen] = useState(false);
   const [naming, setNaming] = useState(false);
-  const [gpuOpen, setGpuOpen] = useState(false);
-  const [backendOpen, setBackendOpen] = useState(false);
-  const [vaultOpen, setVaultOpen] = useState(false);
+  const [gpuOpen, setGpuOpen]           = useState(false);
+  const [backendOpen, setBackendOpen]   = useState(false);
+  const [masteringOpen, setMasteringOpen] = useState(false);
+  const [vaultOpen, setVaultOpen]       = useState(false);
   const preview = useRef<PreviewHandle>(null);
   const activeRef = useRef(active); activeRef.current = active;
   const treeRef = useRef(tree); treeRef.current = tree;
@@ -147,6 +151,7 @@ export default function App() {
   const online = !!status?.ok, modelUp = !!status?.model;
   return (
     <div className="app">
+      {/* ── top bar ──────────────────────────────────────────────────────── */}
       <header className="top">
         <div className="brand"><span className="mark">🏗️</span> CRANE <small>BUILDER</small></div>
         <div className="proj">
@@ -159,46 +164,15 @@ export default function App() {
               </select>
               <button className="btn" onClick={() => setNaming(true)}>＋ New</button></>}
         </div>
-        <div className="seg" role="tablist" aria-label="View">
-          <button className={view === "code" ? "on" : ""} onClick={() => setView("code")}>CODE</button>
-          <button className={view === "preview" ? "on" : ""} onClick={() => setView("preview")}>PREVIEW</button>
-          <button className={view === "split" ? "on" : ""} onClick={() => setView("split")} title="Side by side">⊞</button>
-        </div>
         <div className="right">
-          {/* mode toggle */}
-          <button className={`mode-toggle ${mode}`} onClick={toggleMode} title={mode === "auto" ? "AUTO: full autonomous — click to switch to PLAN mode" : "PLAN: think then act — click to switch to AUTO mode"}>
-            {mode === "auto"
-              ? <><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> AUTO</>
-              : <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> PLAN</>}
-          </button>
-          {project && (running ? <button className="btn" onClick={stopPreview}>■ Stop</button> : <button className="btn" onClick={startPreview} disabled={starting}>▶ Run</button>)}
-          <button className={`btn ${termOpen ? "on" : ""}`} onClick={() => setTermOpen((t) => !t)}>⌨</button>
-          {/* GPU meter toggle */}
-          <button className={`btn gpu-btn ${gpuOpen ? "on" : ""}`} onClick={() => setGpuOpen(o => !o)} title="GPU usage meter — berylize-node">
+          <span className={`status ${modelUp ? "ok" : online ? "warn" : "bad"}`}
+            title={status?.model ? `${status.name ?? "Berylize"} · ${status.model}` : "Berylize not reachable"}>
+            <i />{modelUp ? (status!.name ?? status!.model!.split("/").pop()?.slice(0, 16)) : "offline"}
+          </span>
+          <button className={`btn gpu-btn ${gpuOpen ? "on" : ""}`} onClick={() => setGpuOpen(o => !o)} title="GPU meter">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 6V4M10 6V4M14 6V4M18 6V4M6 18v2M10 18v2M14 18v2M18 18v2"/></svg>
             GPU
           </button>
-          <span className={`status ${modelUp ? "ok" : online ? "warn" : "bad"}`} title={status?.model ? `${status.name ?? "Berylize"} · ${status.model}` : "Berylize not reachable"}>
-            <i />{modelUp ? (status!.name ?? status!.model!.split("/").pop()?.slice(0, 16)) : "offline"}
-          </span>
-          {/* podman panel */}
-          <button className={`btn gpu-btn ${podmanOpen ? "on" : ""}`} onClick={() => setPodmanOpen(o => !o)} title="Podman container manager — self-hosting, Docker conversion">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <rect x="2" y="8" width="20" height="12" rx="2"/>
-              <path d="M6 8V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3"/>
-              <line x1="12" y1="12" x2="12" y2="16"/><line x1="8" y1="14" x2="16" y2="14"/>
-            </svg>
-            PODMAN
-          </button>
-          {/* backend panel — always visible with label */}
-          <button className={`btn gpu-btn ${backendOpen ? "on" : ""}`} onClick={() => setBackendOpen(o => !o)} title="AI backend, Hermes launcher, voice agent">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="5" cy="12" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="19" r="2"/>
-              <line x1="7" y1="11.5" x2="17" y2="6"/><line x1="7" y1="12.5" x2="17" y2="18"/>
-            </svg>
-            BACKEND
-          </button>
-          {/* vault */}
           <button className="btn" onClick={() => setVaultOpen(o => !o)} title="Secure token vault">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -206,8 +180,60 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {/* ── nav bar ──────────────────────────────────────────────────────── */}
+      <nav className="crane-nav">
+        {/* primary tabs */}
+        <div className="crane-nav-tabs">
+          {([
+            { id: "build",     icon: "🏗️",  label: "BUILD" },
+            { id: "mastering", icon: "🎙️",  label: "MASTERING" },
+            { id: "backend",   icon: "⚙️",  label: "BACKEND" },
+            { id: "reports",   icon: "📊",  label: "REPORTS" },
+          ] as { id: NavTab; icon: string; label: string }[]).map(t => (
+            <button key={t.id} data-id={t.id} className={`crane-nav-tab ${navTab === t.id ? "active" : ""}`}
+              onClick={() => {
+                setNavTab(t.id);
+                if (t.id === "mastering") setMasteringOpen(true);
+                if (t.id === "backend")   setBackendOpen(true);
+              }}>
+              <span className="crane-nav-icon">{t.icon}</span>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* build-tab secondary controls (view + mode + run) */}
+        {navTab === "build" && (
+          <div className="crane-nav-right">
+            <div className="seg" role="tablist" aria-label="View">
+              <button className={view === "code" ? "on" : ""} onClick={() => setView("code")}>CODE</button>
+              <button className={view === "preview" ? "on" : ""} onClick={() => setView("preview")}>PREVIEW</button>
+              <button className={view === "split" ? "on" : ""} onClick={() => setView("split")} title="Side by side">⊞</button>
+            </div>
+            <button className={`mode-toggle ${mode}`} onClick={toggleMode}
+              title={mode === "auto" ? "AUTO — click to switch to PLAN" : "PLAN — click to switch to AUTO"}>
+              {mode === "auto"
+                ? <><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> AUTO</>
+                : <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> PLAN</>}
+            </button>
+            {project && (running
+              ? <button className="btn" onClick={stopPreview}>■ Stop</button>
+              : <button className="btn" onClick={startPreview} disabled={starting}>▶ Run</button>)}
+            <button className={`btn ${termOpen ? "on" : ""}`} onClick={() => setTermOpen(t => !t)}>⌨</button>
+            <button className={`btn gpu-btn ${podmanOpen ? "on" : ""}`} onClick={() => setPodmanOpen(o => !o)} title="Podman">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <rect x="2" y="8" width="20" height="12" rx="2"/>
+                <path d="M6 8V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3"/>
+              </svg>
+              PODMAN
+            </button>
+          </div>
+        )}
+      </nav>
       <GpuMeter open={gpuOpen} onClose={() => setGpuOpen(false)} />
-      <BackendPanel open={backendOpen} onClose={() => setBackendOpen(false)} />
+      <BackendPanel open={backendOpen} onClose={() => { setBackendOpen(false); if (navTab === "backend") setNavTab("build"); }} />
+      <MasteringPanel open={masteringOpen} onClose={() => { setMasteringOpen(false); if (navTab === "mastering") setNavTab("build"); }} />
       <PodmanPanel open={podmanOpen} onClose={() => setPodmanOpen(false)} />
       <VaultPanel open={vaultOpen} onClose={() => setVaultOpen(false)} />
 

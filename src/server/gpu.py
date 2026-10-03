@@ -22,7 +22,7 @@ PROJECT = os.environ.get("CRANE_GCP_PROJECT", "posh-eden")
 ZONE    = os.environ.get("CRANE_GCP_ZONE",    "us-east1-c")
 HOURLY_RATE  = float(os.environ.get("CRANE_GPU_RATE", "0.40"))   # $/hr — g2-standard-4 + L4
 POLL_INTERVAL = 15          # seconds between nvidia-smi polls
-DEFAULT_IDLE  = 900         # 15 min
+DEFAULT_IDLE  = int(os.environ.get("CRANE_GPU_IDLE", "7200"))   # 2 h; GPU busy / model loaded also counts as active
 
 LOG_FILE = Path("/mnt/elana/ai_apps/crane/gpu_sessions.json")
 
@@ -145,7 +145,12 @@ async def _poll_loop() -> None:
                 uptime_h = 0.0
                 cost = 0.0
 
-            idle_until_pause = max(0, idle_timeout - idle_secs)
+            # a loaded model or a busy GPU is activity: never pause mid-load / mid-serve
+            if smi.get("gpu_util", 0) > 5 or smi.get("mem_used_mb", 0) > 2000:
+                ping()
+                idle_secs = 0
+
+            idle_until_pause = max(0, idle_timeout - idle_secs) if idle_timeout > 0 else -1   # -1 = sleeper disabled
             _metrics = {
                 "instance_status": "running",
                 **smi,
@@ -160,7 +165,7 @@ async def _poll_loop() -> None:
                 await _broadcast({"type": "metrics", "data": _metrics})
 
             # idle-pause
-            if idle_secs >= idle_timeout:
+            if idle_timeout > 0 and idle_secs >= idle_timeout:
                 await pause_instance()
 
         else:

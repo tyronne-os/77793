@@ -180,6 +180,54 @@ async def ws_chat(ws: WebSocket):
             current.cancel()
 
 
+@app.websocket("/ws/avatar-chat")
+async def ws_avatar_chat(ws: WebSocket):
+    """Dedicated WebSocket for the Mastering Suite avatar — same chat handler, isolated history."""
+    if not origin_ok(ws):
+        return await ws.close(code=1008)
+    await ws.accept()
+    history: list[dict] = []
+    current: asyncio.Task | None = None
+    try:
+        while True:
+            msg = await ws.receive_json()
+            if msg.get("type") == "stop" and current:
+                current.cancel()
+                await ws.send_json({"type": "done"})
+                continue
+            if msg.get("type") == "reset":
+                history.clear()
+                continue
+            if current and not current.done():
+                current.cancel()
+                await asyncio.sleep(0)
+            gpu.ping()
+            current = asyncio.create_task(_safe_chat(ws, history, msg["message"], msg.get("active_file")))
+    except WebSocketDisconnect:
+        if current:
+            current.cancel()
+
+
+@app.post("/api/services/speaches/tts")
+async def speaches_tts(body: dict):
+    """Send text to speaches TTS on port 8013 and return base64 audio."""
+    import base64
+    import httpx as _httpx
+    text = (body.get("text") or "").strip()
+    if not text:
+        raise HTTPException(400, "text required")
+    try:
+        async with _httpx.AsyncClient(timeout=30) as c:
+            r = await c.post("http://127.0.0.1:8013/v1/audio/speech",
+                             json={"model": "speaches", "input": text, "voice": "af_bella"})
+        if r.status_code == 200:
+            return {"ok": True, "audio_b64": base64.b64encode(r.content).decode(),
+                    "content_type": r.headers.get("content-type", "audio/wav")}
+        return {"ok": False, "message": f"speaches {r.status_code}: {r.text[:200]}"}
+    except Exception as e:
+        return {"ok": False, "message": f"speaches not reachable: {e}"}
+
+
 @app.websocket("/ws/gpu")
 async def ws_gpu(ws: WebSocket):
     if not origin_ok(ws):
@@ -227,7 +275,7 @@ def gpu_settings_get():
 def gpu_settings_set(body: dict):
     if "idle_timeout" in body:
         try:
-            gpu.settings["idle_timeout"] = max(60, int(body["idle_timeout"]))
+            gpu.settings["idle_timeout"] = (0 if int(body["idle_timeout"]) <= 0 else max(60, int(body["idle_timeout"])))
         except (ValueError, TypeError):
             pass
     if "hourly_rate" in body:
