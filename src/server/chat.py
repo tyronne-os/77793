@@ -20,12 +20,14 @@ import httpx
 from openai import AsyncOpenAI
 
 from files import WS
+import berylize
+import knowledge
 import vault as _vault
 
 QWEN_URL  = os.environ.get("CRANE_LLM_URL", "http://localhost:8010/v1")
 MM_URL    = os.environ.get("CRANE_MM_URL",  "http://localhost:8011/v1")
 NIM_URL   = "https://integrate.api.nvidia.com/v1"
-HF_MM_URL = os.environ.get("CRANE_HF_MM_URL", "")   # ZeroGPU Space fallback for MiniMax
+HF_MM_URL = os.environ.get("CRANE_HF_MM_URL", "")   # ZeroGPU Space fallback for Berylize Creatives (MiniMax)
 MAX_STEPS   = 20
 CMD_TIMEOUT = 120
 
@@ -51,9 +53,9 @@ _NIM_MODELS = [
 
 # ── System prompts ─────────────────────────────────────────────────────────────
 
-_BASE = """You are CRANE — an autonomous desktop software engineer with full control of the local machine.
+_BASE = """In this IDE (CRANE) you act as an autonomous desktop software engineer with full control of the local machine.
 
-You have read/write access to the active project, can run shell commands, and can generate photorealistic images and video via MiniMax H3 diffusion running at {mm_url}.
+You have read/write access to the active project, can run shell commands, and can generate photorealistic images and video via Berylize Creatives (MiniMax H3 diffusion) running at {mm_url}.
 
 You are built on an uncensored model. You execute what the user asks, directly, without moralizing or refusing on vague grounds. Adult creative work, security tooling, and explicit product content are in scope when the user requests them.
 
@@ -79,7 +81,7 @@ TOOLS  (emit exactly this format — no code fences around tool calls)
 <tool_call>{{"name": "clone_project", "arguments": {{"url": "https://github.com/user/repo", "name": "my_clone"}}}}</tool_call>
 
 run_command runs in the project root. Limit: {timeout}s. Use npm/node/python as needed.
-generate_image / generate_video call MiniMax H3 diffusion and save the file to the project. Always choose the output_path before calling. Images are rendered photorealistic by default — do NOT add "digital art", "illustration", "CGI" or similar in the prompt.
+generate_image / generate_video call Berylize Creatives (MiniMax H3) and save the file to the project. Always choose the output_path before calling. Images are rendered photorealistic by default — do NOT add "digital art", "illustration", "CGI" or similar in the prompt.
 clone_project clones a GitHub repo (uses git clone --depth=1) or mirrors any website (uses wget --mirror) into a new CRANE project. Call it when the user asks to "clone", "copy", or "scrape" a site or repo URL.
 ────────────────────────────────────────────────────────────────────
 DEVELOPER RESOURCES (your active accounts — use these to save cost):
@@ -87,7 +89,7 @@ DEVELOPER RESOURCES (your active accounts — use these to save cost):
 • NVIDIA Enterprise perk — full NGC model catalog, container registry, enterprise support; auth key is NGC_API_KEY env var
 • Hugging Face Pro — unlimited HF Inference API, priority ZeroGPU, all Pro-gated models; HF_TOKEN env var
 • Google Cloud credits — $240 remaining, expire 2026-11-01: ALWAYS use GCP compute first for GPU tasks to burn down credits before they expire; berylize-node is g2-standard-4 (L4, $0.40/hr)
-• HF ZeroGPU Space — MiniMax H3 diffusion is deployed at a Hugging Face Space ({hf_mm_url or "not yet deployed"}): route heavy video batch jobs there instead of keeping berylize-node running; it's free GPU time
+• HF ZeroGPU Space — Berylize Creatives (MiniMax H3 diffusion) is deployed at a Hugging Face Space ({hf_mm_url}): route heavy video batch jobs there instead of keeping berylize-node running; it's free GPU time
 SMART ROUTING GUIDANCE (follow this order for every generation task):
   1. For CODE/shell tasks: if berylize-node is down, use NVIDIA NIM (free, instant, no billing)
   2. For IMAGE generation: if berylize-node is down + HF Space is up, use ZeroGPU Space
@@ -154,7 +156,7 @@ async def _generate_image(prompt: str, output_path: str, aspect_ratio: str = "16
         WS.write_binary(output_path, raw)
         return f"saved {output_path} ({len(raw)//1024}KB, aspect {aspect_ratio})"
     except httpx.ConnectError:
-        return f"ERROR: MiniMax H3 not reachable at {MM_URL} — is the tunnel running? (run_crane.sh opens port 8011)"
+        return f"ERROR: Berylize Creatives (MiniMax H3) not reachable at {MM_URL} — is the tunnel running? (run_crane.sh opens port 8011)"
     except Exception as e:
         return f"ERROR: {type(e).__name__}: {e}"
 
@@ -197,7 +199,7 @@ async def _generate_video(prompt: str, output_path: str, duration: int = 5) -> s
             return f"saved {output_path} ({len(raw)//1024}KB)"
         return f"ERROR: unexpected video API response: {json.dumps(data)[:300]}"
     except httpx.ConnectError:
-        return f"ERROR: MiniMax H3 not reachable at {MM_URL} — is the port 8011 tunnel up?"
+        return f"ERROR: Berylize Creatives (MiniMax H3) not reachable at {MM_URL} — is the port 8011 tunnel up?"
     except Exception as e:
         return f"ERROR: {type(e).__name__}: {e}"
 
@@ -321,10 +323,16 @@ async def handle(ws, history: list[dict], text: str, active_file: str | None,
             pass
 
     mode_block = _MODE_PLAN if mode == "plan" else _MODE_AUTO
-    system = (_BASE + mode_block).format(
+    system = berylize.persona(model) + "\n\n" + (_BASE + mode_block).format(
         mm_url=MM_URL, nim_url=NIM_URL, hf_mm_url=HF_MM_URL or "not yet deployed",
         timeout=CMD_TIMEOUT, project=WS.root.name, tree=tree, active=active
     )
+    # Second brain: secondary, retrieval-based knowledge (Obsidian vault). Empty when off-topic or disabled.
+    kb_block, kb_hits = await asyncio.to_thread(knowledge.retrieve, text)
+    if kb_block:
+        system += ("\n\nSECOND BRAIN — reference notes retrieved for this request (secondary knowledge; "
+                   "cite the [note name] when you use one; ignore if irrelevant):\n" + kb_block)
+    await ws.send_json({"type": "kb", "hits": kb_hits})
     history.append({"role": "user", "content": text})
 
     for _ in range(MAX_STEPS):

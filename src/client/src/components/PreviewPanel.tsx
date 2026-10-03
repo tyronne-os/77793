@@ -13,7 +13,7 @@ const PreviewPanel = forwardRef<PreviewHandle, Props>(({ running, starting, erro
       <div className="preview-empty">
         <div className="crane-mark" aria-hidden>🏗️</div>
         <h3>{starting ? "Starting your project…" : "Nothing running yet"}</h3>
-        <p>{starting ? "First run installs dependencies, this can take a minute." : "Start the preview, or just ask Qwen to build something."}</p>
+        <p>{starting ? "First run installs dependencies, this can take a minute." : "Start the preview, or just ask Berylize to build something."}</p>
         {error && <pre className="err">{error}</pre>}
         {!starting && <button className="btn primary" onClick={onStart}>▶ Start preview</button>}
       </div>

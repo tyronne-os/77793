@@ -9,8 +9,10 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+import berylize
 import chat
 import gpu
+import knowledge
 import podman as _podman
 import process
 import terminal
@@ -18,6 +20,7 @@ import vault
 from files import WS
 
 app = FastAPI(title="CRANE")
+app.include_router(knowledge.router)
 STATIC = Path(__file__).parent / "static"
 ALLOWED_HOSTS = {"localhost", "127.0.0.1"}   # the terminal socket is a shell: loopback origins only
 
@@ -44,7 +47,8 @@ def _shutdown() -> None:
 
 @app.get("/api/status")
 async def status():
-    return {"ok": True, "model": await chat.model_id(), "llm": chat.QWEN_URL,
+    mid = await chat.model_id()
+    return {"ok": True, "model": mid, "name": berylize.display_name(mid), "creatives": berylize.CREATIVES_NAME, "llm": chat.QWEN_URL,
             "project": WS.root.name if WS.root else None, "preview": process.running(),
             "mode": _settings["mode"]}
 
@@ -136,6 +140,16 @@ async def ws_files(ws: WebSocket):
         WS.clients.discard(ws)
 
 
+async def _safe_chat(ws: WebSocket, history: list[dict], text: str, active_file: str | None) -> None:
+    """Run one chat turn; surface unexpected exceptions to the UI instead of dying silently in the task."""
+    try:
+        await chat.handle(ws, history, text, active_file, _settings["mode"])
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:                      # noqa: BLE001
+        await ws.send_json({"type": "error", "message": f"chat failed: {type(e).__name__}: {e}"})
+
+
 @app.websocket("/ws/chat")
 async def ws_chat(ws: WebSocket):
     if not origin_ok(ws):
@@ -160,7 +174,7 @@ async def ws_chat(ws: WebSocket):
                 current.cancel()
                 await asyncio.sleep(0)
             gpu.ping()
-            current = asyncio.create_task(chat.handle(ws, history, msg["message"], msg.get("active_file"), _settings["mode"]))
+            current = asyncio.create_task(_safe_chat(ws, history, msg["message"], msg.get("active_file")))
     except WebSocketDisconnect:
         if current:
             current.cancel()

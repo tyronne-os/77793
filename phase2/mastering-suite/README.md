@@ -1,9 +1,15 @@
-# BERYL Mastering Suite — Phase 2
+# BERYL Mastering Suite — Phase 2 (assets and earlier prototype)
 
 Live avatar pipeline testing UI. This is the full-stack canvas for wiring, testing
 and monitoring the conversational avatar pipeline before it is wired into the CRANE IDE.
 
-## The UI (`BERYL-MASTERING-SUITE.html`)
+> **Correction (2026-10-03):** `EVE-ECC-NODE-UI-PROTO.html` (formerly mislabeled `BERYL-MASTERING-SUITE.html`) is the earlier
+> "EVE ECC" prototype (stage chips, EVE Live Studio pane). The newer Mastering Suite shown in `screenshots/BERYL-MASTERING-SUITE-UI.png`
+> (Node Inspector / Wiring Spec tabs, one-click model swap, Copy spec / .json) is **not in this repo** - only its screenshot is. The
+> closest source on GitHub is `tyronne-os/eve-ecc` (`apps/web/src/components/pipeline/AceCortexPane.tsx`). The CRANE IDE now has a
+> Mastering Suite panel with the Research -> Nodes tab (see `src/client/src/components/MasteringSuite.tsx`).
+
+## The UI shown in the screenshot
 - **8-node ReactFlow pipeline**: Riva ASR → Berylize 7B LLM → Kokoro 82M TTS → Audio2Face-3D → AnimGraph → Omniverse Kit + Browser WebRTC + Media Clock + Mirror Loop
 - **BERYL Live Studio panel** (right): live video feed, blendshape readout (ARKit 52), Talk / Speak / Cycle node controls
 - **Node Inspector + Wiring Spec** (bottom): one-click model swap, endpoint/port/latency config

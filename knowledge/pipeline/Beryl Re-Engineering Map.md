@@ -1,3 +1,10 @@
+---
+type: pipeline
+tags: [pipeline, beryl, reference]
+imported: 2026-10-02
+---
+Related: [[Live Avatar Pipeline]] · [[Latency Budget]] · [[Verification Layer]] · [[Playbook - Build a Live Avatar Pipeline]]
+
 Beryl Live Human OS · Re-Engineering Map + Deployment Report
 
 # Node arrangement, cold-start strategy, and BitNet impact

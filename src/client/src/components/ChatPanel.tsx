@@ -170,7 +170,7 @@ export default function ChatPanel({ msgs, busy, ready, onSend, onStop, activeFil
       <div className="chat-log">
         {!msgs.length && (
           <div className="chat-hello">
-            <b>Tell Qwen what to build.</b>
+            <b>Tell Berylize what to build.</b>
             <span>Watch it appear. Interrupt any time with a correction.</span>
             <div className="chips">{IDEAS.map((i) => <button key={i} className="chip" disabled={!ready} onClick={() => onSend(i)}>{i}</button>)}</div>
           </div>
@@ -272,7 +272,7 @@ export default function ChatPanel({ msgs, busy, ready, onSend, onStop, activeFil
           ref={taRef}
           value={text}
           rows={1}
-          placeholder={ready ? "Describe it, or tell Qwen what to change…" : "Open or create a project to start"}
+          placeholder={ready ? "Describe it, or tell Berylize what to change…" : "Open or create a project to start"}
           disabled={!ready && !busy}
           onChange={e => { setText(e.target.value); baseTextRef.current = e.target.value; }}
           onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}

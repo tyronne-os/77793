@@ -259,7 +259,7 @@ export default function VaultPanel({ open, onClose }: { open: boolean; onClose: 
                 {/* HF extra: deploy ZeroGPU Space */}
                 {svc.id === "huggingface" && st.configured && (
                   <div className="vault-github-extra">
-                    <label>DEPLOY ZEROGPU SPACE (crane-gen) — free MiniMax H3 fallback</label>
+                    <label>DEPLOY ZEROGPU SPACE (crane-gen) — free Berylize Creatives (MiniMax H3) fallback</label>
                     <div className="vault-repo-row">
                       <input className="vault-input repo-name" placeholder="your-hf-username/crane-gen"
                         value={hfSpaceName} onChange={e => setHfSpaceName(e.target.value)} />

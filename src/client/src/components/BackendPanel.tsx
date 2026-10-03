@@ -72,6 +72,7 @@ function AiNode({ data }: NodeProps<NodeData>) {
     <div style={{ width: 210, padding: "6px 7px 8px", borderRadius: 10, border: `1.5px solid ${BP.gold3}`, background: data.frame, boxShadow: `0 0 0 1px #3a2610, 0 14px 34px rgba(0,0,0,0.55)` }}>
       <Handle type="target" position={Position.Top} style={{ background: BP.orange, border: `1.5px solid ${BP.gold5}` }} />
       <Handle type="source" position={Position.Bottom} style={{ background: BP.orange, border: `1.5px solid ${BP.gold5}` }} />
+      <Handle id="kb-in" type="target" position={Position.Right} style={{ background: BP.ok, border: `1.5px solid ${BP.gold5}` }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
         <span style={{ fontSize: 7, fontWeight: 800, letterSpacing: "0.32em", color: "rgba(255,255,255,0.85)" }}>CRANE</span>
         <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor, boxShadow: data.online ? `0 0 6px ${statusColor}` : "none", transition: "background .4s" }} />
@@ -111,19 +112,70 @@ function AiNode({ data }: NodeProps<NodeData>) {
   );
 }
 
-const NODE_TYPES = { ai: AiNode };
+
+// ── Second Brain node (Obsidian vault → Berylize) ─────────────────────────────
+type KbData = {
+  stats: { notes: number; chunks: number; links: number; enabled: boolean; kinds: Record<string, number>; vault?: string } | null;
+  hits: { note: string; heading: string; score: number }[]; flash: boolean;
+};
+const KB_GREEN = "#3ecf8e";
+
+function KbNode({ data }: NodeProps<KbData>) {
+  const s = data.stats;
+  const on = !!s?.enabled && (s?.notes ?? 0) > 0;
+  const col = s === null ? BP.warn : on ? KB_GREEN : BP.bad;
+  const btn = (label: string, key: string, c: string) => (
+    <button key={key} onClick={e => { e.stopPropagation(); _dispatch?.("brain", key); }}
+      style={{ background: "#0d1f17", border: `1px solid ${c}33`, borderRadius: 5, padding: "3px 7px", cursor: "pointer", fontFamily: "var(--sans)", fontSize: 9, fontWeight: 700, color: c, letterSpacing: "0.08em" }}>{label}</button>
+  );
+  return (
+    <div style={{ width: 250, padding: "6px 7px 8px", borderRadius: 10, border: `1.5px solid ${data.flash ? KB_GREEN : "#2f7a5a"}`, background: "linear-gradient(160deg,#1e5a43,#123a2b 55%,#0b2a1e)", boxShadow: data.flash ? `0 0 0 2px ${KB_GREEN}66, 0 0 28px ${KB_GREEN}55` : "0 0 0 1px #0a2a1c, 0 14px 34px rgba(0,0,0,0.55)", transition: "box-shadow .35s, border-color .35s" }}>
+      <Handle type="source" position={Position.Left} style={{ background: KB_GREEN, border: `1.5px solid ${BP.gold5}` }} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+        <span style={{ fontSize: 7, fontWeight: 800, letterSpacing: "0.32em", color: "rgba(255,255,255,0.85)" }}>CRANE</span>
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: col, boxShadow: on ? `0 0 6px ${col}` : "none" }} />
+      </div>
+      <div style={{ background: "#07050d", border: `1px solid ${BP.border}`, borderRadius: 6, padding: "8px 9px 6px", boxShadow: "inset 0 0 12px rgba(0,0,0,0.8)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontFamily: "monospace", fontSize: 8, fontWeight: 700, color: "#04140d", background: KB_GREEN, borderRadius: 3, padding: "2px 5px" }}>SECOND BRAIN</span>
+          <span style={{ fontFamily: "monospace", fontSize: 8, color: col, letterSpacing: "0.08em" }}>{s === null ? "CHECKING…" : on ? "INDEXED" : s.enabled ? "EMPTY" : "PAUSED"}</span>
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: BP.fg, marginTop: 8 }}>Avatar Knowledge Vault</div>
+        <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.12em", color: BP.muted, marginTop: 3 }}>OBSIDIAN GRAPH · SECONDARY TO BERYLIZE</div>
+        <div style={{ height: 1, background: KB_GREEN, opacity: 0.5, margin: "6px 0" }} />
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+          {[["notes", s?.notes], ["chunks", s?.chunks], ["links", s?.links]].map(([k, v]) => (
+            <span key={k as string} style={{ fontFamily: "monospace", fontSize: 9, color: on ? KB_GREEN : BP.muted, background: "#1a1520", border: `1px solid ${BP.border}`, borderRadius: 999, padding: "2px 8px" }}>{v ?? "–"} {k}</span>
+          ))}
+        </div>
+        <div style={{ marginTop: 7, fontFamily: "monospace", fontSize: 9, color: BP.muted, minHeight: 24, lineHeight: 1.35 }}>
+          {data.hits.length
+            ? <><span style={{ color: KB_GREEN }}>last recall ▸ </span>{data.hits.slice(0, 3).map(h => h.note.length > 24 ? h.note.slice(0, 23) + "…" : h.note).join(" · ")}</>
+            : "no recall yet — asks about avatars pull from here"}
+        </div>
+        <div style={{ display: "flex", gap: 4, marginTop: 8, flexWrap: "wrap" }}>
+          {btn("↻ Reindex", "reindex", KB_GREEN)}
+          {btn(s?.enabled === false ? "▶ Enable" : "⏸ Pause", "toggle", BP.gold2)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const NODE_TYPES = { ai: AiNode, kb: KbNode };
 const EDGE_TYPES = { pulse: PulseEdge };
 
 // ── static graph definition ───────────────────────────────────────────────────
 const BASE_NODES = [
-  { id: "qwen",    position: { x: 220, y: 340 }, frame: `linear-gradient(160deg,${BP.gold1},${BP.gold4} 55%,${BP.gold5})`,    tag: "LLM",       tagBg: BP.orangeBr, tagFg: "#1a0a00", label: "Qwen 32B",    sub: "2.5-Coder · abliterated", chip: "port 8010 · vLLM",          actions: [{ label: "Tunnel", key: "tunnel", variant: "ok" as const }, { label: "NIM →", key: "nim", variant: "warn" as const }] },
-  { id: "minimax", position: { x: 400, y: 60 },  frame: `linear-gradient(160deg,${BP.purple1},${BP.purple2} 55%,${BP.purple3})`, tag: "DIFFUSION", tagBg: BP.purple1,  tagFg: "#0a0018", label: "MiniMax H3",  sub: "Diffusion · image & video", chip: "port 8011 · OpenAI compat", actions: [{ label: "Tunnel", key: "tunnel", variant: "ok" as const }, { label: "ZeroGPU", key: "zerogpu", variant: "warn" as const }] },
+  { id: "qwen",    position: { x: 220, y: 340 }, frame: `linear-gradient(160deg,${BP.gold1},${BP.gold4} 55%,${BP.gold5})`,    tag: "LLM",       tagBg: BP.orangeBr, tagFg: "#1a0a00", label: "Berylize",    sub: "BASE QWEN · LOCAL MODEL", chip: "port 8010 · vLLM",          actions: [{ label: "Tunnel", key: "tunnel", variant: "ok" as const }, { label: "NIM →", key: "nim", variant: "warn" as const }] },
+  { id: "minimax", position: { x: 400, y: 60 },  frame: `linear-gradient(160deg,${BP.purple1},${BP.purple2} 55%,${BP.purple3})`, tag: "DIFFUSION", tagBg: BP.purple1,  tagFg: "#0a0018", label: "Berylize Creatives",  sub: "MiniMax H3 · image & video", chip: "port 8011 · OpenAI compat", actions: [{ label: "Tunnel", key: "tunnel", variant: "ok" as const }, { label: "ZeroGPU", key: "zerogpu", variant: "warn" as const }] },
   { id: "kokoro",  position: { x: 30, y: 60 },   frame: `linear-gradient(160deg,${BP.blue1},${BP.blue2} 55%,${BP.blue3})`,     tag: "VOICE",     tagBg: BP.blue1,    tagFg: "#060e1a", label: "Kokoro TTS", sub: "82M · voice cloning & synth", chip: "port 8012 · local",         actions: [{ label: "▶ Start", key: "start", variant: "ok" as const }, { label: "♪ Test", key: "test", variant: "muted" as const }] },
 ];
 
 const EDGES = [
   { id: "qwen-minimax", source: "qwen", target: "minimax", type: "pulse", label: "diffuse" },
   { id: "qwen-kokoro",  source: "qwen", target: "kokoro",  type: "pulse", label: "speak" },
+  { id: "brain-qwen",   source: "brain", target: "qwen", targetHandle: "kb-in", type: "pulse", label: "recall" },
 ];
 
 const PORT_MAP: Record<string, number> = { qwen: 8010, minimax: 8011, kokoro: 8012 };
@@ -142,6 +194,12 @@ export default function BackendPanel({ open, onClose }: { open: boolean; onClose
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [gpuWorking, setGpuWorking] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [kb, setKb] = useState<KbData["stats"]>(null);
+  const [kbHits, setKbHits] = useState<KbData["hits"]>([]);
+  const [kbFlash, setKbFlash] = useState(false);
+  const [modelName, setModelName] = useState("Berylize");
+  const kbRef = useRef<KbData["stats"]>(null);
+  kbRef.current = kb;
 
   // poll service status + GPU every 5s
   useEffect(() => {
@@ -152,12 +210,25 @@ export default function BackendPanel({ open, onClose }: { open: boolean; onClose
         fetch("/api/gpu/status").then(r => r.json()).catch(() => null),
       ]);
       setSvc(s);
+      fetch("/api/knowledge/status").then(r => r.json()).then(k => { setKb(k); if (k.last_hits?.length) setKbHits(h => h.length ? h : k.last_hits); }).catch(() => setKb(null));
+      fetch("/api/status").then(r => r.json()).then(st => st?.name && setModelName(st.name)).catch(() => {});
       if (g) setGpu({ running: g.running ?? false, cost: g.total_cost_usd ?? 0, uptime: g.uptime_seconds ?? 0, util: g.gpu_util });
     };
     poll();
     const t = setInterval(poll, 5000);
     return () => clearInterval(t);
   }, [open]);
+
+  // light up the Second Brain node whenever chat retrieved notes
+  useEffect(() => {
+    const onKb = (e: Event) => {
+      const hits = ((e as CustomEvent).detail ?? []) as KbData["hits"];
+      setKbHits(hits);
+      if (hits.length) { setKbFlash(true); setTimeout(() => setKbFlash(false), 1800); }
+    };
+    window.addEventListener("crane-kb", onKb);
+    return () => window.removeEventListener("crane-kb", onKb);
+  }, []);
 
   // action dispatcher for node buttons
   _dispatch = useCallback((nodeId: string, action: string) => {
@@ -171,6 +242,9 @@ export default function BackendPanel({ open, onClose }: { open: boolean; onClose
       setTimeout(() => window.dispatchEvent(new CustomEvent("crane-terminal-exec", { detail: { cmd } })), 150);
     };
     switch (`${nodeId}.${action}`) {
+      case "brain.reindex": fetch("/api/knowledge/reindex", { method: "POST" }).then(r => r.json()).then(setKb).catch(() => {}); break;
+      case "brain.toggle":  fetch("/api/knowledge/toggle", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ enabled: !(kbRef.current?.enabled ?? true) }) })
+                              .then(() => fetch("/api/knowledge/status")).then(r => r.json()).then(setKb).catch(() => {}); break;
       case "qwen.tunnel":    exec(tunnelCmds.qwen); break;
       case "minimax.tunnel": exec(tunnelCmds.minimax); break;
       case "qwen.nim":       exec(`export NVIDIA_API_KEY=$NGC_API_KEY && echo "NIM mode — using integrate.api.nvidia.com"`); break;
@@ -181,10 +255,12 @@ export default function BackendPanel({ open, onClose }: { open: boolean; onClose
   }, []);
 
   // build live nodes (inject online status)
-  const liveNodes = BASE_NODES.map(n => ({
+  const liveNodes: any[] = BASE_NODES.map(n => ({
     id: n.id, type: "ai", position: n.position,
-    data: { nodeId: n.id, label: n.label, sub: n.sub, tag: n.tag, chip: n.chip, frame: n.frame, tagBg: n.tagBg, tagFg: n.tagFg, online: svc[n.id] ?? null, actions: n.actions },
+    data: { nodeId: n.id, label: n.id === "qwen" ? modelName : n.label, sub: n.sub, tag: n.tag, chip: n.chip, frame: n.frame, tagBg: n.tagBg, tagFg: n.tagFg, online: svc[n.id] ?? null, actions: n.actions },
   }));
+
+  liveNodes.push({ id: "brain", type: "kb", position: { x: 500, y: 340 }, data: { stats: kb, hits: kbHits, flash: kbFlash } });
 
   const launchHermes = async (mode: string) => {
     setHermesMsg(null);

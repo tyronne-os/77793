@@ -1,0 +1,63 @@
+{
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "colorGroups": [
+    {
+      "query": "path:papers",
+      "color": {
+        "a": 1,
+        "rgb": 10519768
+      }
+    },
+    {
+      "query": "path:repos",
+      "color": {
+        "a": 1,
+        "rgb": 6333946
+      }
+    },
+    {
+      "query": "path:concepts",
+      "color": {
+        "a": 1,
+        "rgb": 14267482
+      }
+    },
+    {
+      "query": "path:playbooks",
+      "color": {
+        "a": 1,
+        "rgb": 4116366
+      }
+    },
+    {
+      "query": "path:pipeline",
+      "color": {
+        "a": 1,
+        "rgb": 15764026
+      }
+    },
+    {
+      "query": "path:research",
+      "color": {
+        "a": 1,
+        "rgb": 16735581
+      }
+    },
+    {
+      "query": "path:persona",
+      "color": {
+        "a": 1,
+        "rgb": 15850642
+      }
+    },
+    {
+      "query": "path:MOC",
+      "color": {
+        "a": 1,
+        "rgb": 15525618
+      }
+    }
+  ]
+}

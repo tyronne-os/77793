@@ -1,6 +1,9 @@
 fastapi
+httpx
+numpy
+openai
+pillow
+ptyprocess
+pyyaml
 uvicorn[standard]
 watchdog
-ptyprocess
-openai
-httpx

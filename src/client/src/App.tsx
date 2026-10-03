@@ -13,7 +13,7 @@ import { liveWrite } from "./liveWrite";
 
 type View = "code" | "preview" | "split";
 type Mode = "auto" | "plan";
-type Status = { ok: boolean; model: string | null; project: string | null; preview: boolean; mode?: Mode };
+type Status = { ok: boolean; model: string | null; name?: string; creatives?: string; project: string | null; preview: boolean; mode?: Mode };
 const j = (url: string, body?: unknown, method = body ? "POST" : "GET") =>
   fetch(url, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined })
     .then(async (r) => { if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? r.statusText); return r.json(); });
@@ -109,6 +109,7 @@ export default function App() {
     if (m.type === "token") setMsgs((ms) => { const l = ms[ms.length - 1];
       return l?.role === "assistant" ? [...ms.slice(0, -1), { ...l, text: l.text + m.delta }] : [...ms, { role: "assistant", text: m.delta }]; });
     else if (m.type === "step") setMsgs((ms) => ms.at(-1)?.role === "assistant" ? [...ms, { role: "assistant", text: "" }] : ms);
+    else if (m.type === "kb") window.dispatchEvent(new CustomEvent("crane-kb", { detail: m.hits ?? [] }));
     else if (m.type === "error") { setBusy(false); setMsgs((ms) => [...ms, { role: "error", text: m.message }]); }
     else if (m.type === "done") {
       setBusy(false); refreshTree();
@@ -137,7 +138,7 @@ export default function App() {
     return () => window.removeEventListener("crane-open-terminal", handler);
   }, []);
 
-  // what Qwen is typing right now (partial write_file in the last reply)
+  // what Berylize is typing right now (partial write_file in the last reply)
   const live = useMemo(() => busy ? liveWrite(msgs.filter((m) => m.role === "assistant").at(-1)?.text ?? "") : null, [busy, msgs]);
   const liveOn = !!live && !live.done;
   const shownPath = liveOn ? live!.path : active;
@@ -177,8 +178,8 @@ export default function App() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 6V4M10 6V4M14 6V4M18 6V4M6 18v2M10 18v2M14 18v2M18 18v2"/></svg>
             GPU
           </button>
-          <span className={`status ${modelUp ? "ok" : online ? "warn" : "bad"}`} title={status?.model ?? "Qwen not reachable"}>
-            <i />{modelUp ? (status!.model!.split("/").pop()?.slice(0, 16)) : online ? "offline" : "offline"}
+          <span className={`status ${modelUp ? "ok" : online ? "warn" : "bad"}`} title={status?.model ? `${status.name ?? "Berylize"} · ${status.model}` : "Berylize not reachable"}>
+            <i />{modelUp ? (status!.name ?? status!.model!.split("/").pop()?.slice(0, 16)) : "offline"}
           </span>
           {/* podman panel */}
           <button className={`btn gpu-btn ${podmanOpen ? "on" : ""}`} onClick={() => setPodmanOpen(o => !o)} title="Podman container manager — self-hosting, Docker conversion">
@@ -213,7 +214,7 @@ export default function App() {
       <main className="body">
         <ChatPanel msgs={msgs} busy={busy} ready={!!project && chat.open} onSend={send} onStop={stop} activeFile={active} tree={tree} />
         <section className="stage">
-          {liveOn && <div className="livebar"><i />Qwen is writing <b>{live!.path}</b>
+          {liveOn && <div className="livebar"><i />{status?.name ?? "Berylize"} is writing <b>{live!.path}</b>
             {view === "preview" && <button onClick={() => setView("split")}>watch the code</button>}</div>}
           <div className={`panes ${view}`}>
             {view !== "preview" && (

@@ -1,6 +1,6 @@
 /**
  * CRANE Podman Panel — 10 advanced features
- * Accessible from the header PODMAN button or by asking Qwen in chat.
+ * Accessible from the header PODMAN button or by asking Berylize in chat.
  */
 import { useCallback, useEffect, useState } from "react";
 
@@ -675,7 +675,7 @@ export default function PodmanPanel({ open, onClose }: { open: boolean; onClose:
                   <div>• <strong style={{ color: PM.text }}>Systemd integration</strong> — auto-start containers on boot (CONTAINERS tab → ⚙ Systemd)</div>
                   <div>• <strong style={{ color: PM.text }}>Drop-in docker-compose</strong> — <code style={{ color: PM.gold }}>podman compose up -d</code> works with your existing files</div>
                   <div>• <strong style={{ color: PM.text }}>Pods</strong> — group related containers (db + app + cache) like Kubernetes</div>
-                  <div>• <strong style={{ color: PM.text }}>Ask Qwen</strong> — type <em style={{ color: PM.gold }}>"create a podman compose for nginx + postgres"</em> in chat</div>
+                  <div>• <strong style={{ color: PM.text }}>Ask Berylize</strong> — type <em style={{ color: PM.gold }}>"create a podman compose for nginx + postgres"</em> in chat</div>
                 </div>
               </Section>
             </div>

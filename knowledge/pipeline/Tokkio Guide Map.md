@@ -1,3 +1,10 @@
+---
+type: pipeline
+tags: [pipeline, nvidia, reference]
+imported: 2026-10-02
+---
+Related: [[Live Avatar Pipeline]] · [[Latency Budget]] · [[Verification Layer]] · [[Playbook - Build a Live Avatar Pipeline]]
+
 NVIDIA ACE Platform
 
 # Tokkio *Guide Map*
