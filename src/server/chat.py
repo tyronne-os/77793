@@ -21,6 +21,7 @@ from openai import AsyncOpenAI
 
 from files import WS
 import berylize
+import jev
 import knowledge
 import vault as _vault
 
@@ -306,7 +307,8 @@ async def _get_active_client() -> tuple[AsyncOpenAI, str]:
 
 
 async def handle(ws, history: list[dict], text: str, active_file: str | None,
-                 mode: str = "auto") -> None:
+                 mode: str = "auto", style_hint: str = "", rerank: bool = True,
+                 allow_tools: set[str] | None = None) -> None:
     """One user turn: loop model ↔ tools until it stops calling tools."""
     active_client, model = await _get_active_client()
     _using_nim = active_client is not client   # True when falling back to NVIDIA NIM
@@ -328,10 +330,15 @@ async def handle(ws, history: list[dict], text: str, active_file: str | None,
         timeout=CMD_TIMEOUT, project=WS.root.name, tree=tree, active=active
     )
     # Second brain: secondary, retrieval-based knowledge (Obsidian vault). Empty when off-topic or disabled.
-    kb_block, kb_hits = await asyncio.to_thread(knowledge.retrieve, text)
+    if rerank:
+        kb_block, kb_hits = await jev.retrieve_ranked(text)     # BM25 candidates reranked by JEV (falls back silently)
+    else:
+        kb_block, kb_hits = await asyncio.to_thread(knowledge.retrieve, text)
     if kb_block:
         system += ("\n\nSECOND BRAIN — reference notes retrieved for this request (secondary knowledge; "
                    "cite the [note name] when you use one; ignore if irrelevant):\n" + kb_block)
+    if style_hint:
+        system += "\n\n" + style_hint
     await ws.send_json({"type": "kb", "hits": kb_hits})
     history.append({"role": "user", "content": text})
 
@@ -370,7 +377,10 @@ async def handle(ws, history: list[dict], text: str, active_file: str | None,
             except (ValueError, KeyError):
                 results.append("ERROR: malformed tool_call JSON")
                 continue
-            res = await exec_tool(name, args)
+            if allow_tools is not None and name not in allow_tools:
+                res = f"ERROR: tool '{name}' is not permitted in this role. Allowed: {', '.join(sorted(allow_tools))}"
+            else:
+                res = await exec_tool(name, args)
             await ws.send_json({
                 "type": "tool", "name": name,
                 "path": args.get("path") or args.get("output_path") or args.get("command", ""),

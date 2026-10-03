@@ -231,17 +231,18 @@ async def _test_gcp() -> dict:
 
 
 async def _test_jev(token: str) -> dict:
-    # JEV endpoint: Hugging Face Space API — test it's reachable
-    # Do NOT log or return any part of the key
+    # Real TypeSafe System One endpoint. One tiny billed call; the key is never logged or returned.
     try:
-        async with httpx.AsyncClient(timeout=10) as c:
-            r = await c.get("https://api-inference.huggingface.co/status/test",
-                            headers={"Authorization": f"Bearer {token}"})
-        if r.status_code in (200, 404, 422):
-            return {"ok": True, "message": "JEV key reachable — HF inference API responded"}
-        return {"ok": False, "message": f"HF inference returned {r.status_code}"}
+        async with httpx.AsyncClient(timeout=10, trust_env=False) as c:
+            r = await c.post("https://api.typesafe.ai/v1/systemone",
+                             headers={"Authorization": f"Bearer {token}"},
+                             json={"model": "jev-latest", "state": "ping",
+                                   "questions": {"ok": {"type": "noul", "instructions": "Is this a connectivity test?"}}})
+        if r.status_code == 200:
+            return {"ok": True, "message": "JEV connected (TypeSafe System One)"}
+        return {"ok": False, "message": f"TypeSafe returned HTTP {r.status_code}"}
     except Exception as e:
-        return {"ok": False, "message": str(e)[:80]}
+        return {"ok": False, "message": type(e).__name__}
 
 
 async def _test_gemini(token: str) -> dict:

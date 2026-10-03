@@ -1,0 +1,196 @@
+{
+  "started": "2026-10-03T03:08:40",
+  "mode": "converse",
+  "policy": "round_robin",
+  "topic": "How should a live conversational avatar feel natural to talk to?",
+  "seats": [
+    {
+      "id": "seat1",
+      "name": "Beryl",
+      "persona": "You are Beryl, the confident host of Beryl Labs. You are sharp, warm and a little witty.",
+      "pipeline": "local",
+      "model": "fake-1",
+      "temperature": 0.85,
+      "max_tokens": 140
+    },
+    {
+      "id": "seat2",
+      "name": "Atlas",
+      "persona": "You are Atlas, a skeptical engineer who stress-tests ideas and asks hard practical questions.",
+      "pipeline": "local",
+      "model": "fake-1",
+      "temperature": 0.85,
+      "max_tokens": 140
+    }
+  ],
+  "turns": [
+    {
+      "turn": 0,
+      "seat": "seat1",
+      "name": "Beryl",
+      "pipeline": "local",
+      "model": "fake-1",
+      "text": "I would push back: latency under a second is what makes it feel alive.",
+      "metrics": {
+        "queue_ms": 0,
+        "ttft_ms": 173,
+        "total_ms": 703,
+        "chunks": 14,
+        "tps": 24.5
+      },
+      "quality": {
+        "words": 14,
+        "repetition": 0.0,
+        "diversity": 1.0
+      }
+    },
+    {
+      "turn": 1,
+      "seat": "seat2",
+      "name": "Atlas",
+      "pipeline": "local",
+      "model": "fake-1",
+      "text": "What if the avatar reacted with micro expressions while listening?",
+      "metrics": {
+        "queue_ms": 0,
+        "ttft_ms": 83,
+        "total_ms": 453,
+        "chunks": 10,
+        "tps": 24.4
+      },
+      "quality": {
+        "words": 10,
+        "repetition": 0.0,
+        "diversity": 1.0
+      }
+    },
+    {
+      "turn": 2,
+      "seat": "seat1",
+      "name": "Beryl",
+      "pipeline": "local",
+      "model": "fake-1",
+      "text": "Let us agree to prototype both and measure.",
+      "metrics": {
+        "queue_ms": 0,
+        "ttft_ms": 101,
+        "total_ms": 384,
+        "chunks": 8,
+        "tps": 24.8
+      },
+      "quality": {
+        "words": 8,
+        "repetition": 0.0,
+        "diversity": 1.0
+      }
+    },
+    {
+      "turn": 3,
+      "seat": "seat2",
+      "name": "Atlas",
+      "pipeline": "local",
+      "model": "fake-1",
+      "text": "That is a fascinating point, and I think warmth matters most.",
+      "metrics": {
+        "queue_ms": 0,
+        "ttft_ms": 58,
+        "total_ms": 465,
+        "chunks": 11,
+        "tps": 24.5
+      },
+      "quality": {
+        "words": 11,
+        "repetition": 0.0,
+        "diversity": 1.0
+      }
+    },
+    {
+      "turn": 4,
+      "seat": "seat1",
+      "name": "Beryl",
+      "pipeline": "local",
+      "model": "fake-1",
+      "text": "I would push back: latency under a second is what makes it feel alive.",
+      "metrics": {
+        "queue_ms": 0,
+        "ttft_ms": 63,
+        "total_ms": 590,
+        "chunks": 14,
+        "tps": 24.7
+      },
+      "quality": {
+        "words": 14,
+        "repetition": 1.0,
+        "diversity": 1.0
+      }
+    },
+    {
+      "turn": 5,
+      "seat": "seat2",
+      "name": "Atlas",
+      "pipeline": "local",
+      "model": "fake-1",
+      "text": "What if the avatar reacted with micro expressions while listening?",
+      "metrics": {
+        "queue_ms": 0,
+        "ttft_ms": 63,
+        "total_ms": 433,
+        "chunks": 10,
+        "tps": 24.3
+      },
+      "quality": {
+        "words": 10,
+        "repetition": 1.0,
+        "diversity": 1.0
+      }
+    },
+    {
+      "turn": 6,
+      "seat": "seat1",
+      "name": "Beryl",
+      "pipeline": "local",
+      "model": "fake-1",
+      "text": "Let us agree to prototype both and measure.",
+      "metrics": {
+        "queue_ms": 0,
+        "ttft_ms": 64,
+        "total_ms": 350,
+        "chunks": 8,
+        "tps": 24.5
+      },
+      "quality": {
+        "words": 8,
+        "repetition": 1.0,
+        "diversity": 1.0
+      }
+    }
+  ],
+  "guard_tripped": true,
+  "id": "20261003-030843-103d",
+  "summary": {
+    "seat1": {
+      "name": "Beryl",
+      "pipeline": "local",
+      "model": "fake-1",
+      "turns": 4,
+      "avg_ttft_ms": 100.25,
+      "avg_tps": 24.62,
+      "avg_total_ms": 506.75,
+      "avg_words": 11.0,
+      "avg_repetition": 0.5,
+      "avg_diversity": 1.0
+    },
+    "seat2": {
+      "name": "Atlas",
+      "pipeline": "local",
+      "model": "fake-1",
+      "turns": 3,
+      "avg_ttft_ms": 68.0,
+      "avg_tps": 24.4,
+      "avg_total_ms": 450.33,
+      "avg_words": 10.33,
+      "avg_repetition": 0.33,
+      "avg_diversity": 1.0
+    }
+  }
+}

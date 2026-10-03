@@ -18,6 +18,8 @@ import process
 import terminal
 import vault
 import coderag
+import engineers
+import jev
 import mcp_server
 import multiavatar
 from files import WS
@@ -27,6 +29,8 @@ app.include_router(knowledge.router)
 app.include_router(coderag.router)
 app.include_router(mcp_server.router)
 app.include_router(multiavatar.router)
+app.include_router(jev.router)
+app.include_router(engineers.router)
 STATIC = Path(__file__).parent / "static"
 ALLOWED_HOSTS = {"localhost", "127.0.0.1"}   # the terminal socket is a shell: loopback origins only
 
@@ -146,10 +150,73 @@ async def ws_files(ws: WebSocket):
         WS.clients.discard(ws)
 
 
-async def _safe_chat(ws: WebSocket, history: list[dict], text: str, active_file: str | None) -> None:
-    """Run one chat turn; surface unexpected exceptions to the UI instead of dying silently in the task."""
+AVATAR_FACTS = {
+    "body": "A 2D animated face inside the CRANE browser app. There is no video render and no camera.",
+    "can_see_user": False,
+    "can_hear_user": "Only when the user turns the microphone on; otherwise only typed text.",
+    "memory": "Writes durable notes to the Second Brain and recalls them by search; does not remember everything.",
+    "can_browse_or_act": "Only through the CRANE tools; it cannot take physical actions.",
+}
+
+
+class _HoldDone:
+    """Avatar socket proxy: holds back 'done' (which starts speech) until the JEV performance plan is ready."""
+
+    def __init__(self, ws):
+        self.ws, self.held = ws, False
+
+    async def send_json(self, m: dict) -> None:
+        if m.get("type") == "done":
+            self.held = True
+            return
+        await self.ws.send_json(m)
+
+    async def release(self) -> None:
+        if self.held:
+            self.held = False
+            await self.ws.send_json({"type": "done"})
+
+
+async def _jev_event(ws: WebSocket, coro, event: str) -> None:
+    """Run a JEV node off the critical path and push its result to the UI. Never raises."""
     try:
-        await chat.handle(ws, history, text, active_file, _settings["mode"])
+        r = await coro
+        if r:
+            await ws.send_json({"type": event, **r} if event == "jev_route" else {"type": event, "result": r})
+    except Exception:           # noqa: BLE001  (socket closed or JEV down: the chat turn is unaffected)
+        pass
+
+
+async def _safe_chat(ws: WebSocket, history: list[dict], text: str, active_file: str | None,
+                     avatar: bool = False) -> None:
+    """Run one chat turn; surface unexpected exceptions to the UI instead of dying silently in the task.
+    JEV nodes: avatar turns get perception (mood, delivery style) before the LLM; BUILD turns get a routing/risk read
+    in parallel; both feed the memory gate afterwards."""
+    try:
+        hint, rerank = "", True
+        if avatar:
+            prev = next((m["content"] for m in reversed(history) if m["role"] == "assistant"), "")
+            perc = await jev.perceive(text, prev)
+            if perc:
+                await ws.send_json({"type": "jev", "perception": perc})
+            hint, rerank = jev.style_hint(perc), False          # avatar path skips rerank to keep first-word latency low
+        else:
+            asyncio.create_task(_jev_event(ws, jev.route_task(text), "jev_route"))
+        before = len(history)
+        sock = _HoldDone(ws) if avatar else ws
+        await chat.handle(sock, history, text, active_file, _settings["mode"], style_hint=hint, rerank=rerank)
+        if len(history) > before and history[-1]["role"] == "assistant":
+            reply = history[-1]["content"]
+            if avatar:
+                # performance plan + self-knowledge check run together, ahead of speech (capped, fail-open)
+                perf, prop = await asyncio.gather(jev.performance(text, reply), jev.proprioception(reply, AVATAR_FACTS))
+                if perf:
+                    await ws.send_json({"type": "jev_perf", "performance": perf})
+                if prop:
+                    await ws.send_json({"type": "jev_proprio", "check": prop})
+            asyncio.create_task(_jev_event(ws, jev.remember(text, reply), "jev_memory"))
+        if avatar:
+            await sock.release()
     except asyncio.CancelledError:
         raise
     except Exception as e:                      # noqa: BLE001
@@ -208,7 +275,7 @@ async def ws_avatar_chat(ws: WebSocket):
                 current.cancel()
                 await asyncio.sleep(0)
             gpu.ping()
-            current = asyncio.create_task(_safe_chat(ws, history, msg["message"], msg.get("active_file")))
+            current = asyncio.create_task(_safe_chat(ws, history, msg["message"], msg.get("active_file"), avatar=True))
     except WebSocketDisconnect:
         if current:
             current.cancel()
@@ -222,6 +289,15 @@ async def ws_multi_avatar(ws: WebSocket):
     await ws.accept()
     gpu.ping()
     await multiavatar.run_session(ws)
+
+
+@app.websocket("/ws/engineers")
+async def ws_engineers(ws: WebSocket):
+    """Engineering team: architect -> engineer -> verifier -> reviewer loop with JEV as team lead (engineers.py)."""
+    if not origin_ok(ws):
+        return await ws.close(code=1008)
+    await ws.accept()
+    await engineers.run_session(ws)
 
 
 @app.websocket("/ws/rag-chat")

@@ -377,3 +377,7 @@ button,select,input,textarea{font:inherit;color:inherit}
 @keyframes think-bounce{0%{transform:translateY(0)} 100%{transform:translateY(-8px)}}
 .listen-ring{animation:listen-expand 1.4s ease-out infinite}
 @keyframes listen-expand{0%{opacity:.35;r:122} 100%{opacity:0;r:150}}
+
+.av-breathe{animation:av-breathe 4.2s ease-in-out infinite}
+@keyframes av-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(var(--breath,1px))}}
+@media (prefers-reduced-motion:reduce){.av-breathe{animation:none}}

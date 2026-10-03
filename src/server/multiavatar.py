@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Awaitable, Callable
 
 import httpx
+import jev
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
 LLM_URL = os.environ.get("CRANE_AVATAR_LLM_URL", "http://localhost:11434/v1").rstrip("/")
@@ -43,7 +44,7 @@ DEFAULT_MODEL = os.environ.get("CRANE_AVATAR_MODEL", "phi3.5:latest")
 OPENCODE_CFG = Path(os.environ.get("CRANE_OPENCODE_CFG", Path.home() / ".config/opencode/opencode.jsonc"))
 
 MAX_SEATS, MAX_TURNS, HISTORY_WINDOW, SPEECH_ACK_TIMEOUT = 4, 200, 24, 90
-POLICIES = ("round_robin", "random", "mention")
+POLICIES = ("round_robin", "random", "mention", "jev")
 
 router = APIRouter(prefix="/api/multiavatar")
 
@@ -202,6 +203,14 @@ class Session:
         self.runner: asyncio.Task | None = None
         self.spoke, self.stop, self.barge = asyncio.Event(), asyncio.Event(), asyncio.Event()
         self.record: dict = {}
+        self._jtasks: list[asyncio.Task] = []
+
+    # -- JEV judge (non-blocking; scores arrive as events)
+    async def _judge(self, entry: dict, seat: dict, prior: list[str]) -> None:
+        j = await jev.judge_turn(self.topic, seat["persona"], seat["name"], entry["text"], prior)
+        if j:
+            entry["jev"] = j
+            await self.send({"type": "jev_judge", "seat": seat["id"], "turn": entry["turn"], "jev": j})
 
     # -- generation with metrics
     async def _generate(self, seat: dict, messages: list[dict]) -> dict | None:
@@ -254,7 +263,13 @@ class Session:
     async def _converse(self, max_turns: int, policy: str, guard: bool, wait_for_speech: bool) -> None:
         turn, last, last_text, high_rep = 0, -1, "", 0
         while turn < max_turns and not self.stop.is_set():
-            idx = self._next(policy, last, last_text)
+            if policy == "jev" and last >= 0:
+                who = await jev.pick_speaker(last_text, self.seats[last]["name"], [s["name"] for s in self.seats])
+                idx = next((i for i, s in enumerate(self.seats) if s["name"] == who), None)
+                if idx is None:
+                    idx = self._next("mention", last, last_text)
+            else:
+                idx = self._next(policy, last, last_text)
             seat = self.seats[idx]
             self.barge.clear()
             await self.send({"type": "turn_start", "seat": seat["id"], "turn": turn})
@@ -270,7 +285,8 @@ class Session:
                 await self.send({"type": "interrupted", "seat": seat["id"], "turn": turn, "text": text})
             else:
                 self.transcript.append({"seat": seat["id"], "name": seat["name"], "text": text})
-                self._log(seat, turn, text, res, q)
+                entry = self._log(seat, turn, text, res, q)
+                self._jtasks.append(asyncio.create_task(self._judge(entry, seat, prior)))
                 await self.send({"type": "turn_done", "seat": seat["id"], "text": text, "turn": turn,
                                  "metrics": res["metrics"], "quality": q,
                                  "pipeline": seat["pipeline"], "model": seat["model"]})
@@ -295,10 +311,11 @@ class Session:
             if res is None:
                 return
             q = quality(res["text"], [])
-            self._log(seat, i, res["text"], res, q)
+            entry = self._log(seat, i, res["text"], res, q)
             await self.send({"type": "turn_done", "seat": seat["id"], "text": res["text"], "turn": i,
                              "metrics": res["metrics"], "quality": q,
                              "pipeline": seat["pipeline"], "model": seat["model"]})
+            self._jtasks.append(asyncio.create_task(self._judge(entry, seat, [])))
         await asyncio.gather(*(one(i, s) for i, s in enumerate(self.seats)))
 
     def summary(self) -> dict:
@@ -314,7 +331,9 @@ class Session:
                             "avg_total_ms": avg(lambda t: t["metrics"]["total_ms"]),
                             "avg_words": avg(lambda t: t["quality"]["words"]),
                             "avg_repetition": avg(lambda t: t["quality"]["repetition"]),
-                            "avg_diversity": avg(lambda t: t["quality"]["diversity"])}
+                            "avg_diversity": avg(lambda t: t["quality"]["diversity"]),
+                            "avg_jev": (round(sum(t["jev"]["score"] for t in ts if "jev" in t) / sum(1 for t in ts if "jev" in t), 2)
+                                        if any("jev" in t for t in ts) else None)}
         return out
 
     def _save(self) -> str:
@@ -334,6 +353,9 @@ class Session:
                 await self._arena()
             else:
                 await self._converse(max_turns, policy, guard, wait_for_speech)
+            if self._jtasks:
+                await asyncio.gather(*self._jtasks, return_exceptions=True)
+                self._jtasks.clear()
             rid = self._save()
             await self.send({"type": "finished", "turns": len(self.record["turns"]),
                              "summary": self.record["summary"], "run_id": rid})
