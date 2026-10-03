@@ -318,6 +318,9 @@ button,select,input,textarea{font:inherit;color:inherit}
 .crane-nav-tab.active[data-id="mastering"]{color:#a084d8;border-bottom-color:#a084d8}
 .crane-nav-icon{font-size:13px}
 .crane-nav-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.crane-nav-home{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;color:#6a5a78;text-decoration:none;transition:color .12s,background .12s;flex-shrink:0}
+.crane-nav-home:hover{color:#d9b45a;background:#1a1020}
+.crane-nav-divider{width:1px;height:20px;background:#2a1e36;flex-shrink:0;margin:0 4px}
 /* shift layout to account for nav bar */
 .body{flex:1;min-height:0;height:0;display:grid;grid-template-columns:minmax(320px,380px) 1fr}
 
