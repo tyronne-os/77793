@@ -1,6 +1,92 @@
-# CRANE Session Handoff — 2026-10-03 (All-Night Session)
+# CRANE Session Handoff — 2026-10-03 (Continued)
 
 **Next agent: pick up from here. Everything is documented. No gaps.**
+
+---
+
+## SESSION 2 UPDATE — 2026-10-03 (morning/afternoon)
+
+### Harness: Hermes → OpenCode (COMPLETE)
+- Hermes dropped (requires subscription)
+- OpenCode installed (`~/.opencode/bin/opencode`, v1.18.34)
+- Config at `~/.config/opencode/opencode.jsonc`
+- Lead model: `dolphin3:8b` (uncensored, via Ollama at localhost:11434)
+- Berylize 14B also wired as provider `berylize` via port 8010 tunnel
+- CRANE Second Brain exposed as MCP at `http://localhost:8000/mcp` (crane-brain)
+- `src/server/mcp_server.py` — NEW: SSE MCP server (search_knowledge, read_note, knowledge_status)
+
+### System Cleanup (COMPLETE)
+- GNOME bloatware purged: calculator, calendar, gedit, evince, tracker, whoopsie, rygel etc.
+- Old kernel `linux-image-6.8.0-40-generic` removed (-632 MB)
+- Old snap revisions (core22/1612, gnome-42-2204/176, opera-developer/475) removed
+- Caches cleared: `~/.cache/uv`, `~/.cache/node-gyp`, `~/.cache/tracker3` etc.
+- Journal trimmed to 5 MB
+- RAM available: 301 MB → **568 MB** | Swap: 2.0 GB → **1.3 GB** used
+
+### USB Storage Pool (COMPLETE)
+- 4 USB drives wiped and combined via LVM linear into one logical volume
+- **Mount:** `/mnt/usbpool` — 85 GB, ext4, auto-mounts on boot
+- **Volume group:** `usbvg` | **Logical vol:** `/dev/usbvg/usbpool`
+- `~/Downloads` symlinked to `/mnt/usbpool/downloads` — all new downloads go here
+- `OLLAMA_MODELS=/mnt/usbpool/ollama` set in `~/.bashrc` — all model weights go to USB
+- `OLLAMA_HOST=0.0.0.0` set in `~/.bashrc`
+- To add a 5th drive later:
+  ```bash
+  sudo pvcreate /dev/sdX
+  sudo vgextend usbvg /dev/sdX
+  sudo lvextend -l +100%FREE /dev/usbvg/usbpool
+  sudo resize2fs /dev/usbvg/usbpool
+  ```
+- Script: `scripts/setup_usbpool.sh` (re-runnable if drives change)
+
+### Ollama — PENDING INSTALL
+- Install command (run in terminal):
+  ```bash
+  curl -fsSL https://ollama.com/install.sh | sudo OLLAMA_MODELS=/mnt/usbpool/ollama sh
+  ```
+- After install, pull models:
+  ```bash
+  bash /mnt/elana/ai_apps/crane/scripts/setup_ollama_models.sh
+  ```
+- Models (all land on USB stick at `/mnt/usbpool/ollama`):
+  - `dolphin3:8b` — uncensored lead (~5 GB)
+  - `qwen2.5-coder:3b` — CodeRAG fast (~2 GB)
+  - `phi3.5:latest` — CodeRAG balanced (~2.3 GB)
+  - `starcoder2:3b` — CodeRAG code (~1.8 GB)
+- **Uncensored by default.** If a model has guardrails, run Heretic/abliteration on it (see below)
+
+### Heretic — Abliteration for Non-Uncensored Models
+- Tool: `sunkencity999/blasphemer` (enhanced fork of Heretic)
+- Purpose: removes refusal vectors from any model's weights permanently
+- Use on: `qwen2.5-coder:3b`, `phi3.5`, `starcoder2:3b` if they show guardrails
+- `dolphin3:8b` is already fully uncensored — skip it
+- Output goes to `/mnt/usbpool/ollama` (abliterated weights saved there)
+
+### BitNet — PENDING (on USB stick)
+- Microsoft BitNet (1.58-bit quantization) — extreme efficiency, runs on CPU
+- Best fit for this machine (3.6 GB RAM, no local GPU)
+- Install from Microsoft's llama.cpp fork:
+  ```bash
+  mkdir -p /mnt/usbpool/bitnet
+  cd /mnt/usbpool/bitnet
+  git clone --depth 1 https://github.com/microsoft/BitNet.git .
+  pip install -r requirements.txt
+  ```
+- Recommended model: `microsoft/BitNet-b1.58-2B-4T` (HF) — 2B params, 1.58-bit, ~400 MB
+  ```bash
+  python setup_env.py -md /mnt/usbpool/bitnet/models -q i2_s
+  ```
+- Inference:
+  ```bash
+  python run_inference.py -m /mnt/usbpool/bitnet/models/gguf-model.gguf -p "your prompt"
+  ```
+- **No GPU needed** — runs entirely on CPU, designed for low-memory devices
+- Port: use 8014 (8010-8013 taken) if serving via API
+
+### Downloads Moved to USB
+- All `~/Downloads` content moved to `/mnt/usbpool/downloads/`
+- Folders preserved: `BIG PROPPA WORKS/`, `CRANE IT/`, `MY BOO/`
+- `~/Downloads` is now a symlink → `/mnt/usbpool/downloads`
 
 ---
 
@@ -8,12 +94,15 @@
 
 | Component | Location | Status |
 |-----------|----------|--------|
-| CRANE IDE (FastAPI + Vite) | `/mnt/elana/ai_apps/crane/` | Running on localhost:8000 |
-| berylize-node (GCP L4) | `34.74.41.235`, zone `us-east1-c`, project `posh-eden` | VM running |
-| vLLM (Qwen2.5-Coder-14B-Instruct-AWQ) | berylize-node port 8010 | **Loading right now** (~15 min from restart) |
-| Speaches TTS (Kokoro ONNX) | berylize-node port 8013 | ✅ Up, Kokoro model loaded |
-| Hermes Agent | `~/.hermes/` + `~/.local/bin/hermes` | ✅ Configured, JEV installed |
-| SSH Tunnels | local 8010→node 8010, local 8013→node 8013 | Need to verify after each reconnect |
+| CRANE IDE (FastAPI + Vite) | `/mnt/elana/ai_apps/crane/` | Not started — run `uvicorn main:app` |
+| berylize-node (GCP L4) | `34.74.41.235`, zone `us-east1-c`, project `posh-eden` | VM running, GPU free |
+| vLLM (Qwen2.5-Coder-14B-Instruct-AWQ) | berylize-node port 8010 | **Inactive** — 14B download incomplete |
+| Speaches TTS (Kokoro ONNX) | berylize-node port 8013 | Unknown — check after tunnel |
+| OpenCode | `~/.opencode/bin/opencode` | ✅ Installed, configured |
+| Ollama | `~/.local/bin/ollama` | **NOT INSTALLED** — run install cmd below |
+| USB Pool | `/mnt/usbpool` (85 GB LVM) | ✅ Mounted, auto-boots |
+| BitNet | `/mnt/usbpool/bitnet` | **NOT INSTALLED** — see below |
+| SSH Tunnels | local 8010→node 8010, local 8013→node 8013 | Not open — run connect_berylize.sh |
 
 ---
 
