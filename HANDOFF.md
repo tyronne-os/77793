@@ -212,3 +212,45 @@ sudo systemctl daemon-reload
 | `~/.hermes/plugins/jev/` | JEV plugin (just installed) |
 | `~/.hermes/SOUL.md` | Hermes persona/identity |
 | `~/.local/bin/hermes` | CLI binary |
+
+---
+
+## UPDATE: Hermes → OpenCode Migration (2026-10-03 morning)
+
+**Hermes dropped** — subscription required. Replaced with **OpenCode** (free, open source).
+
+### OpenCode Install
+- Binary: `~/.opencode/bin/opencode` (v1.18.34)
+- Added to PATH in `~/.bashrc`
+- Config: `~/.config/opencode/opencode.jsonc`
+- Run from any project: `opencode` (TUI) or `opencode run "message"`
+
+### OpenCode Config (`~/.config/opencode/opencode.jsonc`)
+- **Default model**: `berylize/Qwen/Qwen2.5-Coder-14B-Instruct-AWQ` via port 8010 tunnel
+- **Provider `berylize`**: `@ai-sdk/openai-compatible` → `http://localhost:8010/v1`
+- **Provider `coderag`**: `@ai-sdk/openai-compatible` → `http://localhost:11434/v1` (Ollama small models)
+- **MCP `crane`**: `http://localhost:8000/mcp` (CRANE backend tools)
+- Switch models in TUI with `/models`
+
+### Connect Script
+```bash
+bash /mnt/elana/ai_apps/crane/scripts/connect_berylize.sh
+```
+Kills stale tunnels, re-opens 8010+8013, starts vLLM + speaches if down.
+Run this any time you reconnect or after VM restart.
+
+### berylize-node GPU Issue
+VM had GPU detach (nvidia-smi: "No devices were found" despite /dev/nvidia0 present).
+Fixed with stop+start (NOT reboot). VM restarting now.
+After VM is up: run `connect_berylize.sh`, then vLLM loads ~15 min.
+
+### 14B Download State
+~9.3GB downloaded (3/5 shards in shared blobs). Will auto-resume on next vLLM start.
+If it fails, force re-download:
+```bash
+gcloud compute ssh berylize-node --zone=us-east1-c --project=posh-eden \
+  --command='/mnt/disks/extra-storage/envs/vllm-berylize/bin/python -c "
+from huggingface_hub import snapshot_download
+snapshot_download(\"Qwen/Qwen2.5-Coder-14B-Instruct-AWQ\", cache_dir=\"/mnt/disks/extra-storage/huggingface\")
+"'
+```
