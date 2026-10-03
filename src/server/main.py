@@ -18,11 +18,13 @@ import process
 import terminal
 import vault
 import coderag
+import mcp_server
 from files import WS
 
 app = FastAPI(title="CRANE")
 app.include_router(knowledge.router)
 app.include_router(coderag.router)
+app.include_router(mcp_server.router)
 STATIC = Path(__file__).parent / "static"
 ALLOWED_HOSTS = {"localhost", "127.0.0.1"}   # the terminal socket is a shell: loopback origins only
 
