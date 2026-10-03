@@ -1,6 +1,62 @@
-# CRANE Session Handoff — Updated 2026-10-03
+# CRANE Session Handoff — Updated 2026-10-03 (see SESSION UPDATE below)
 
 **Next agent: read this top-to-bottom. Everything you need is here.**
+
+---
+
+## SESSION UPDATE 2026-10-03 (Beryl Mastering Suite, Deploy, Model Lab, NVIDIA keys)
+
+### What was built this session
+| Feature | Where | Status |
+|---|---|---|
+| **BERYL SUITE tab** (node-graph pipeline builder, ported from the "Beryl Mastering Suite" design) | `src/client/src/components/BerylSuite.tsx` | Working |
+| **DEPLOY button + pipeline dropdown + SESSIONS tray** | header of BerylSuite; backend `src/server/deploy.py` | Working |
+| **MODEL LAB tab** (compare up to 6 models, TTFT / tok-s) | `ModelLab.tsx`, `src/server/modellab.py` | Working |
+| NVIDIA NIM + Hostinger setup scripts | `scripts/setup_ngc_nim.sh`, `setup_tokkio_ace.sh`, `setup_enterprise_keys.sh` | Working (prompt via /dev/tty) |
+
+### Beryl Suite behaviour (matches the design screenshot)
+- 9 nodes (MIC, ASR, LLM, TTS, A2F, ANM, IPS, OV, BUS), 4 layouts (Circle default, Rectangle, Vertical, Triangle), zoom/Fit, L0/L1/L2 stage buttons.
+- Presets: BERYL (Kaggle brain, local voice) and TOKKIO BASELINE (Riva ASR, Nemotron, Riva TTS, Audio2Face-3D, Omniverse). Also in the quick-actions menu next to WIRING SPEC.
+- **Health colours**: HOT = green, CLIENT = blue, UNTESTED/TESTING = amber, **DOWN = bright red (#ff1f3d) node with glow, and every edge touching a DOWN node turns solid red**. Edges between two healthy nodes are green dashed.
+- Edge labels show latency (e.g. "think · 350ms"); uses the measured TTFT/ms after a node was tested, else the model budget.
+- Node cards show port + ms; Swap cycles models; Test is a real check (LLM nodes: one real completion through `/api/lab/compare`; others: TCP connect through `/api/lab/probe`, which only allows NVIDIA, HF, loopback and pipeline hosts).
+- Header: **Disconnect / Connect** (Disconnect cancels speech, releases all nodes; Connect redeploys the selected pipeline), "All hot N/M" pill (click = test all).
+- Inspector: model one-click swap, "any model" box (any Kaggle/Ollama/llama.cpp/HF/NIM id), editable endpoint / port / key env-var NAME / latency budget; WIRING SPEC export (copy or .json). Key values never reach the browser.
+- Live Studio: Beryl portrait (`src/client/src/assets/beryl.jpg`), blendshape bars (**simulated signal, labelled SIM**, not real Audio2Face output), **DRIFT / SKEW are real measurements of the browser's 140 ms media-clock timer**, E2E budget vs Tokkio's 1450 ms reference (published targets, not measurements).
+- **Talk**: browser SpeechRecognition (Chrome/Edge only) -> `/ws/avatar-chat` (CRANE's chat brain + JEV) -> speaks the reply with speechSynthesis. Mic path not tested from automation (cannot speak into a mic); the socket round trip was tested and returned a reply.
+- Claude API and Grok API model options were deliberately removed at the user's request. Do not re-add.
+
+### Deploy (one click)
+- `GET /api/deploy/pipelines` lists pipelines; `GET /api/deploy/stream/{id}?slot=N` is an SSE stream that probes each stage in order and the UI lights nodes as they clear.
+- Only pipeline today: `nvidia-prebuilt` ("#1 NVIDIA PRE-BUILT (Tokkio NIM)"): MIC (client), ASR (TCP to grpc.nvcf.nvidia.com:443), LLM (real authorised 1-token call with `NGC_ENTERPRISE_KEY`, retried once), TTS and A2F (TCP only), ANM (client), OV (skipped: needs own GPU node).
+- It auto-runs once when the Suite opens. Each click adds a numbered session card (#1, #2...). Cards track stage status only; they are NOT yet separate avatar/chat instances.
+- **To add a pipeline**: add one entry to `PIPELINES` in `src/server/deploy.py`. It appears in the dropdown automatically.
+- Limitation: ASR/TTS/A2F checks prove NVIDIA is reachable, not that the key is entitled to those gRPC services (no grpc client installed). Only the LLM stage proves auth.
+
+### Model Lab and providers
+- `/api/lab/sources|compare|ollama-pull|probe`. Reasoning models (GLM 5.3, Nemotron Lightning, Muse Glimmer) put output in `reasoning_content`; the Lab shows it under "model's thinking" and flags empty answers.
+- OpenCode (`~/.config/opencode/opencode.jsonc`, NOT in this repo) now has providers: `kaggle` (default), `nim`, `nim-enterprise`, `huggingface` (router URL `https://router.huggingface.co/v1`), `llamacpp`, `local`, `berylize`. **That file holds literal keys; never commit it.** Keys also live in `~/.hermes/.env`.
+- `multiavatar.load_pipelines()` reads every provider from opencode.jsonc and puts Kaggle first (`CRANE_DEFAULT_PIPELINE` overrides), so new providers appear in Multi-Suite and Model Lab with no code change.
+
+### NVIDIA findings (verified by probing, 2026-10-03)
+- Both keys unlock the free-endpoint chat catalog. Enterprise-only: llama-3.2-90b-vision, nemotron-3.5-lightning. Standard-only: nemotron-3-ultra-550b.
+- Retired (404 on both keys): llama-3.1-nemotron-70b, qwen2.5-coder-32b-instruct, meta/llama-3.1-70b, 01-ai/yi-large.
+- Free-tier latency is variable (gemma-4-31b cold start ~19 s).
+
+### Fixes to existing code
+- `chat.py`: `_NIM_MODELS` fallback list replaced with live models (gemma-4-31b-it first); system prompt no longer crashes when no project is open (`WS.root` None). Avatar chat works with no project.
+- `main.py`: registers `modellab` and `deploy` routers.
+
+### Known gaps / next steps (priority order)
+1. **Kaggle is offline** (stale tunnel URL in opencode.jsonc). Restart the notebook, then `bash scripts/kaggle_ops.sh sync`. Beryl's brain then becomes fast; until then it falls back to NVIDIA gemma (slow cold start).
+2. **Face-to-face no-keyboard build session with Beryl** (user's stretch goal, SaaS UI). Design assets: `~/Downloads/CRANE IT/Crane IT Landing Page Design (1).zip` (landing page + design system in `_ds/`). Talk already gives mic -> brain -> voice; still needed: continuous hands-free loop, barge-in, Beryl driving build actions, and a landing/SaaS shell. User also mentioned a "My Boo" folder of extra Beryl photos in Downloads; not found by name, ask for the exact path.
+3. Talk uses CRANE's chat brain, not the model chosen on the Agent/Brain node. Wire the node's model into the avatar socket.
+4. Real Audio2Face: blendshapes are simulated. Needs the A2F gRPC client (grpcio + nvidia-ace protos) against the NIM.
+5. Tokkio ACE: re-run `bash scripts/setup_tokkio_ace.sh --nim-only` to confirm `tokkio_nim.json` (was started in background, never confirmed).
+6. After each reboot start the server with keys loaded: `cd src/server && set -a; . ~/.hermes/.env; set +a; ../../.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8000` (the deploy LLM check reads `NGC_ENTERPRISE_KEY` from the environment). `run_crane.sh` not updated for this.
+7. Live-reload UI dev: `cd src/client && npx vite` serves :8004 and proxies /api and /ws to :8000. Production UI is `npm run build` (output to `src/server/static`, `assets/` is gitignored).
+8. Mirror Loop (IPS) and Omniverse (OV) show red/DOWN locally because nothing listens on 8020/8030. Correct behaviour.
+9. The old MASTERING tab (JEV face cues) is separate and not merged into the Suite.
 
 ---
 

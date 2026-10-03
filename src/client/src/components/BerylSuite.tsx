@@ -14,6 +14,8 @@ type NodeDef = { id: string; tag: string; role: string; kind: Kind; stage: numbe
 type Source = { name: string; host: string; model: string; online: boolean; models: string[] };
 type Health = { state: "untested" | "testing" | "hot" | "down" | "client"; ms?: number; note?: string };
 
+type DStage = { id: string; name: string; detail?: string; status: string; ms?: number; note?: string };
+type DSlot = { slot: number; pid: string; name: string; stages: DStage[]; state: "running" | "live" | "partial"; summary?: string };
 const K: Record<Kind, [string, string, string]> = {
   input: ["linear-gradient(135deg,#3b82f6,#93c5fd)", "rgba(59,130,246,.2)", "#93c5fd"],
   llm: ["linear-gradient(135deg,#a8782f,#f6e2a8 50%,#a8782f)", "rgba(238,202,80,.18)", "#f6d775"],
@@ -77,6 +79,7 @@ function layout(shape: string): { W: number; H: number; P: Record<string, [numbe
   return { W: 1280, H: 1120, P };
 }
 
+const RED = "#ff1f3d";
 const GOLD = "#d9b45a", MUTED = "#8a8290", CARD = "#140a20", BORDER = "#2a1e36", FG = "#ece6f2", OK = "#34d399", BAD = "#f87171", WARN = "#fbbf24";
 const inp: React.CSSProperties = { background: "#0c0614", border: `1px solid ${BORDER}`, color: FG, borderRadius: 5, padding: "6px 9px", fontSize: 12, width: "100%", fontFamily: "monospace" };
 const btn = (on = false): React.CSSProperties => ({ background: on ? GOLD : CARD, color: on ? "#1a1024" : FG, border: `1px solid ${on ? GOLD : BORDER}`,
@@ -103,6 +106,17 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
   const [wrap, setWrap] = useState({ w: 600, h: 400 });
   const [custom, setCustom] = useState({ pipeline: "huggingface", model: "" });
   const [extra, setExtra] = useState<Model[]>([]);
+  const [dpl, setDpl] = useState("nvidia-prebuilt");
+  const [dplList, setDplList] = useState<{ id: string; name: string; description: string }[]>([{ id: "nvidia-prebuilt", name: "NVIDIA PRE-BUILT (Tokkio NIM)", description: "" }]);
+  const [slots, setSlots] = useState<DSlot[]>([]);
+  const [dplOpen, setDplOpen] = useState(false);
+  const autoRan = useRef(false);
+  const [connected, setConnected] = useState(true);
+  const [heard, setHeard] = useState("");
+  const [reply, setReply] = useState("");
+  const recRef = useRef<{ stop: () => void } | null>(null);
+  const [clk, setClk] = useState({ drift: 0, skew: 0 });
+  const tick = useRef({ t0: 0, n: 0, last: 0 });
   const wrapRef = useRef<HTMLDivElement>(null);
   const talkRef = useRef(false);
   talkRef.current = talking;
@@ -145,6 +159,29 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
   useEffect(() => { if (open && online) { active.forEach(n => { if (!health[n.id]) testNode(n); }); } /* first sweep only */ // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, online]);
 
+  // ---- one-click deploy (SSE from /api/deploy/stream)
+  useEffect(() => { if (open) fetch("/api/deploy/pipelines").then(r => r.json()).then(d => d.pipelines?.length && setDplList(d.pipelines)).catch(() => {}); }, [open]);
+  const deploy = useCallback((pid: string) => {
+    const slot = slots.length + 1; setDplOpen(true); setConnected(true);
+    const upd = (f: (d: DSlot) => DSlot) => setSlots(ss => ss.map(d => d.slot === slot ? f(d) : d));
+    setSlots(ss => [...ss, { slot, pid, name: pid, stages: [], state: "running" }]);
+    if (pid === "nvidia-prebuilt") { const p = PRESETS.tokkio; setStage(p.stage); setPick(p.pick); setOver({}); }
+    const es = new EventSource(`/api/deploy/stream/${pid}?slot=${slot}`);
+    const nodeOf: Record<string, string> = { llm: "agt" };
+    es.onmessage = m => {
+      const e = JSON.parse(m.data);
+      if (e.event === "start") upd(d => ({ ...d, name: e.name, stages: e.stages.map((x: DStage) => ({ ...x, status: "wait" })) }));
+      else if (e.event === "stage") {
+        upd(d => ({ ...d, stages: d.stages.map(x => x.id === e.id ? { ...x, status: e.status, ms: e.ms, note: e.note } : x) }));
+        const nid = nodeOf[e.id] || e.id;
+        if (e.status === "live") setHealth(h => ({ ...h, [nid]: { state: e.note === "client-side" ? "client" : "hot", ms: e.ms, note: e.note } }));
+        else if (e.status === "down") setHealth(h => ({ ...h, [nid]: { state: "down", note: e.note } }));
+      } else if (e.event === "done") { upd(d => ({ ...d, state: e.core_ready ? "live" : "partial", summary: e.summary })); es.close(); setToast(e.summary); }
+    };
+    es.onerror = () => { upd(d => ({ ...d, state: "partial", summary: "Lost the CRANE server connection" })); es.close(); };
+  }, [slots.length]);
+  useEffect(() => { if (open && online && !autoRan.current) { autoRan.current = true; deploy("nvidia-prebuilt"); } }, [open, online, deploy]);
+
   // ---- layout + animation
   useEffect(() => {
     if (!open || !wrapRef.current) return;
@@ -153,11 +190,16 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
   }, [open]);
   useEffect(() => {
     if (!open) return;
-    const t = setInterval(() => setBs(SH.map(n => { const t2 = talkRef.current;
-      return n === "jawOpen" || n.startsWith("mouth") ? (t2 ? Math.random() * .8 : Math.random() * .03) : n.startsWith("eyeBlink") ? (Math.random() > .93 ? .9 : .03) : Math.random() * (t2 ? .25 : .03); })), 140);
+    tick.current = { t0: performance.now(), n: 0, last: performance.now() };
+    const t = setInterval(() => { const k = tick.current, now = performance.now(); k.n++;
+      setClk({ drift: now - k.t0 - k.n * 140, skew: now - k.last - 140 }); k.last = now;
+      setBs(SH.map(n => { const t2 = talkRef.current;
+      return n === "jawOpen" || n.startsWith("mouth") ? (t2 ? Math.random() * .8 : Math.random() * .03) : n.startsWith("eyeBlink") ? (Math.random() > .93 ? .9 : .03) : Math.random() * (t2 ? .25 : .03); })); }, 140);
     return () => clearInterval(t);
   }, [open]);
 
+  const disconnect = () => { try { speechSynthesis.cancel(); } catch { /* none */ } setTalking(false); setHealth({}); setConnected(false); setToast("Disconnected. All nodes released. Press Connect to redeploy."); };
+  const connect = () => { setConnected(true); deploy(dpl); };
   const swap = (n: NodeDef, name?: string) => {
     const ms = modelsOf(n); const cur = ms.findIndex(m => m.n === modelOf(n).n);
     setPick(p => ({ ...p, [n.id]: name ?? ms[(cur + 1) % ms.length].n })); setSel(n.id);
@@ -187,6 +229,27 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
   }, [active, pick, over, stage, extra, sources]);
   const copy = (txt: string, msg: string) => { try { navigator.clipboard.writeText(txt); } catch { /* clipboard blocked */ } setToast(msg); };
   const download = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(spec, null, 2)], { type: "application/json" })); a.download = "beryl.pipeline.json"; a.click(); };
+  const say = (t: string) => { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.onstart = () => setTalking(true); u.onend = () => setTalking(false); speechSynthesis.speak(u); } catch { /* no speech synthesis */ } };
+  const ask = (text: string) => {
+    setReply(""); setToast("Beryl is thinking…");
+    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/avatar-chat`); let buf = "";
+    ws.onopen = () => ws.send(JSON.stringify({ message: text }));
+    ws.onmessage = m => { const d = JSON.parse(m.data);
+      if (d.type === "token") { buf += d.delta; setReply(buf); } else if (d.type === "done") { ws.close(); setToast("Beryl is speaking."); if (buf.trim()) say(buf); }
+      else if (d.type === "error") { setToast(d.message); ws.close(); } };
+    ws.onerror = () => setToast("Could not reach Beryl's brain (avatar socket).");
+  };
+  const listen = () => {
+    if (recRef.current) { recRef.current.stop(); recRef.current = null; setToast("Stopped listening."); return; }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { setToast("This browser has no speech recognition. Use Chrome or Edge."); return; }
+    const r = new SR(); r.lang = "en-US"; r.interimResults = true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    r.onresult = (e: any) => { const t = Array.from(e.results as ArrayLike<{ 0: { transcript: string }; isFinal: boolean }>).map(x => x[0].transcript).join(""); setHeard(t); if (e.results[e.results.length - 1].isFinal) ask(t); };
+    r.onend = () => { recRef.current = null; }; r.onerror = () => { recRef.current = null; setToast("Mic blocked or unavailable. Allow microphone access."); };
+    recRef.current = r; r.start(); setHeard(""); setToast("Listening… speak to Beryl.");
+  };
   const speak = () => { try { const u = new SpeechSynthesisUtterance("Hi, I'm Beryl. This is the live studio."); u.onstart = () => setTalking(true); u.onend = () => setTalking(false); speechSynthesis.cancel(); speechSynthesis.speak(u); } catch { setTalking(t => !t); } };
 
   if (!open) return null;
@@ -207,9 +270,35 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
         <div><div style={{ fontWeight: 800, letterSpacing: ".2em", color: GOLD, fontSize: 17 }}>BERYL MASTERING SUITE</div>
           <div style={{ ...lbl, letterSpacing: ".18em" }}>LIVE AVATAR PIPELINE · BERYL LABS</div></div>
         <div style={{ flex: 1 }} />
+        <select value={dpl} onChange={e => setDpl(e.target.value)} style={{ ...inp, width: 250, fontWeight: 700 }} title="Pipeline to deploy">
+          {dplList.map((p, i) => <option key={p.id} value={p.id}>{`#${i + 1} ${p.name}`}</option>)}
+        </select>
+        <button style={{ ...btn(true), background: "#76b900", borderColor: "#76b900", color: "#0b1200", padding: "8px 20px", fontSize: 13 }} onClick={() => deploy(dpl)}>▶ DEPLOY</button>
+        <button style={btn(dplOpen)} onClick={() => setDplOpen(o => !o)}>SESSIONS {slots.length}</button>
         <span style={{ fontSize: 11, fontFamily: "monospace", color: online ? OK : BAD }}>● Backend {online ? "online" : "offline"} · localhost</span>
-        <button style={btn(true)} onClick={onClose}>Close</button>
+        <button style={btn(true)} onClick={connected ? disconnect : connect}>{connected ? "Disconnect" : "Connect"}</button>
+        <button style={btn()} onClick={onClose} aria-label="Close">✕</button>
       </header>
+
+      {dplOpen && slots.length > 0 && (
+        <div style={{ flex: "none", display: "flex", gap: 10, padding: "10px 16px", overflowX: "auto", background: "#0c0813", borderBottom: "1px solid rgba(255,255,255,.08)" }}>
+          {slots.map(d => (
+            <div key={d.slot} style={{ minWidth: 330, background: CARD, border: `1px solid ${d.state === "live" ? OK : d.state === "partial" ? WARN : BORDER}`, borderRadius: 8, padding: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 800 }}>
+                <span style={{ color: GOLD }}>#{d.slot} {d.name}</span>
+                <span style={{ color: d.state === "live" ? OK : d.state === "partial" ? WARN : MUTED }}>{d.state === "running" ? "CONNECTING…" : d.state === "live" ? "● LIVE" : "PARTIAL"}</span>
+              </div>
+              <div style={{ display: "flex", gap: 5, margin: "8px 0", flexWrap: "wrap" }}>
+                {d.stages.map(x => { const c = x.status === "live" ? OK : x.status === "down" ? BAD : x.status === "skip" ? MUTED : x.status === "checking" ? WARN : "#3a2e46";
+                  return <span key={x.id} title={x.note || x.detail} style={{ fontSize: 10, fontFamily: "monospace", border: `1px solid ${c}`, color: c, borderRadius: 4, padding: "2px 6px" }}>
+                    {x.name}{x.status === "live" && x.ms ? ` ${x.ms}ms` : x.status === "skip" ? " skip" : ""}</span>; })}
+              </div>
+              {d.summary && <div style={{ ...lbl, color: FG }}>{d.summary}</div>}
+              {d.stages.filter(x => x.status === "down").map(x => <div key={x.id} style={{ fontSize: 10, color: BAD }}>{x.name}: {x.note}</div>)}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "minmax(0,1fr) 360px" }}>
         {/* ── left: graph + inspector */}
@@ -218,6 +307,9 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
             <div><div style={{ fontWeight: 800, color: FG, fontSize: 13 }}>PIPELINE</div><div style={lbl}>{N.filter(n => n.stage <= stage).length} nodes · {ST[stage][0]} stage · {hotCount} up</div></div>
             {ST.map((s, i) => <button key={s[0]} style={btn(stage === i)} onClick={() => setStage(i)}>{s[0]} {s[1]}</button>)}
             <div style={{ flex: 1 }} />
+            <button onClick={testAll} title="Click to re-test every active node" style={{ border: 0, cursor: "pointer", borderRadius: 999, padding: "6px 22px", fontFamily: "monospace", fontSize: 12, fontWeight: 700, letterSpacing: ".1em",
+              color: "#fff", background: !connected ? "#3a2e46" : hotCount === active.length ? "linear-gradient(90deg,#3b82f6,#a78bfa)" : "linear-gradient(90deg,#92400e,#d97706)" }}>
+              {!connected ? "Offline" : hotCount === active.length ? `All hot ${hotCount}/${active.length}` : `${hotCount}/${active.length} hot`}</button>
             <button style={btn()} onClick={() => applyPreset("beryl")} title="Kaggle brain, local voice">BERYL PRESET</button>
             <button style={{ ...btn(), borderColor: "#76b900", color: "#b6e35b" }} onClick={() => applyPreset("tokkio")} title="NVIDIA Tokkio reference pipeline">▶ TOKKIO BASELINE</button>
             <button style={btn(true)} onClick={testAll}>TEST ALL</button>
@@ -237,19 +329,24 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
                   const [ax, ay] = LP.P[e[0]], [bx, by] = LP.P[e[1]]; const dx = bx - ax, dy = by - ay, horiz = Math.abs(dx) >= Math.abs(dy);
                   const d = horiz ? `M${ax} ${ay} C${ax + dx / 2} ${ay},${ax + dx / 2} ${by},${bx} ${by}` : `M${ax} ${ay} C${ax} ${ay + dy / 2},${bx} ${ay + dy / 2},${bx} ${by}`;
                   const live = ["hot", "client"].includes(health[e[0]]?.state || "") && ["hot", "client"].includes(health[e[1]]?.state || "");
-                  return <g key={i}><path d={d} fill="none" stroke={live ? "#10b981" : "#3a2e46"} strokeWidth={2} strokeDasharray={live ? "6 6" : "3 6"} />
-                    {e[2] && <text x={(ax + bx) / 2} y={(ay + by) / 2 - 8} fill="#9a90a8" fontSize={14} textAnchor="middle" fontFamily="monospace">{e[2]}</text>}</g>;
+                  const bad = byId[e[0]].stage <= stage && byId[e[1]].stage <= stage && (health[e[0]]?.state === "down" || health[e[1]]?.state === "down");
+                  return <g key={i}><path d={d} fill="none" stroke={bad ? RED : live ? "#10b981" : "#3a2e46"} strokeWidth={bad ? 3 : 2} strokeDasharray={bad ? "none" : live ? "6 6" : "3 6"} style={bad ? { filter: `drop-shadow(0 0 4px ${RED})` } : undefined} />
+                    <text x={(ax + bx) / 2} y={(ay + by) / 2 - 8} fill={bad ? RED : "#9a90a8"} fontSize={14} textAnchor="middle" fontFamily="monospace">{`${e[2] || "clock"}${modelOf(byId[e[1]]).ms ? ` · ${health[e[1]]?.ms ?? modelOf(byId[e[1]]).ms}ms` : ""}`}</text></g>;
                 })}
               </svg>
-              {N.map(n => { const [x, y] = LP.P[n.id]; const m = modelOf(n), k = K[n.kind], st = stat(n), on = n.stage <= stage, picked = sel === n.id;
+              {N.map(n => { const [x, y] = LP.P[n.id]; const m = modelOf(n), k = K[n.kind], st = stat(n), on = n.stage <= stage, picked = sel === n.id, down = on && health[n.id]?.state === "down";
                 return (
-                  <div key={n.id} onClick={() => setSel(n.id)} style={{ position: "absolute", left: x - 100, top: y - 62, width: 200, opacity: on ? 1 : 0.28, cursor: "pointer", background: "#120b1d",
-                    border: `2px solid ${picked ? "#f6d775" : k[2] + "88"}`, borderRadius: 12, padding: 12, boxShadow: picked ? "0 0 22px rgba(246,215,117,.35)" : "none" }}>
+                  <div key={n.id} onClick={() => setSel(n.id)} style={{ position: "absolute", left: x - 100, top: y - 62, width: 200, opacity: on ? 1 : 0.28, cursor: "pointer",
+                    border: `2px solid ${down ? RED : picked ? "#f6d775" : k[2] + "88"}`, background: down ? "#2a0a10" : "#120b1d", borderRadius: 12, padding: 12,
+                    boxShadow: down ? `0 0 26px ${RED}99, inset 0 0 14px ${RED}33` : picked ? "0 0 22px rgba(246,215,117,.35)" : "none" }}>
+                    <div style={{ fontSize: 8, letterSpacing: ".25em", color: "#5d5468", fontFamily: "monospace", marginBottom: 3 }}>CRANE</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{ fontSize: 12, fontFamily: "monospace", background: k[1], color: k[2], padding: "1px 7px", borderRadius: 4 }}>{n.tag}</span>
-                      <span style={{ flex: 1 }} /><span style={{ fontSize: 11, fontFamily: "monospace", color: st[1] }}>{st[0]}</span></div>
+                      <span style={{ flex: 1 }} /><span style={{ fontSize: 11, fontFamily: "monospace", fontWeight: down ? 800 : 400, color: down ? RED : st[1] }}>{st[0]}</span></div>
                     <div style={{ fontWeight: 800, fontSize: 17, marginTop: 5 }}>{m.n}</div>
                     <div style={{ fontSize: 12, color: MUTED, minHeight: 16 }}>{health[n.id]?.note || m.d}</div>
+                    <div style={{ fontSize: 11, fontFamily: "monospace", color: "#9a90a8", background: "#0c0614", border: `1px solid ${BORDER}`, borderRadius: 4, padding: "3px 8px", marginTop: 6 }}>
+                      {m.port ? `port ${ov(n, "port", m.port)}` : "in-browser"} · {health[n.id]?.ms ?? m.ms}ms</div>
                     <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                       <button style={{ ...btn(), padding: "3px 8px", fontSize: 12, flex: 1 }} onClick={ev => { ev.stopPropagation(); swap(n); }}>⇄ Swap</button>
                       <button style={{ ...btn(), padding: "3px 8px", fontSize: 12, flex: 1, color: "#6ee7b7" }} onClick={ev => { ev.stopPropagation(); setSel(n.id); testNode(n).then(setToast); }}>▶ Test</button>
@@ -263,6 +360,9 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
               <button style={btn(tab === "inspector")} onClick={() => setTab("inspector")}>NODE INSPECTOR</button>
               <button style={btn(tab === "wiring")} onClick={() => setTab("wiring")}>WIRING SPEC</button>
+              <select aria-label="Quick actions" value="" style={{ ...btn(), width: 36, padding: "6px 4px" }} onChange={e => { const v = e.target.value;
+                if (v === "beryl" || v === "tokkio") applyPreset(v); else if (v === "reset") { setPick({}); setOver({}); setHealth({}); setToast("Reset to defaults."); } else if (v === "all") testAll(); }}>
+                <option value="">▾</option><option value="beryl">Load BERYL preset</option><option value="tokkio">Load TOKKIO baseline</option><option value="all">Test all nodes</option><option value="reset">Reset to defaults</option></select>
               <div style={{ flex: 1 }} />
               <button style={btn()} onClick={() => copy(JSON.stringify(spec, null, 2), "Wiring spec copied to clipboard.")}>⧉ Copy spec</button>
               <button style={btn()} onClick={download}>↓ .json</button>
@@ -296,7 +396,8 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
 
         {/* ── right: live studio */}
         <aside style={{ borderLeft: `1px solid ${BORDER}`, background: "#0c0813", padding: 14, overflowY: "auto", display: "grid", gap: 10, alignContent: "start" }}>
-          <div style={{ display: "flex", alignItems: "center" }}><div><b style={{ letterSpacing: ".1em" }}>BERYL LIVE STUDIO</b><div style={lbl}>{ST[stage][2]} · mirror · {ST[stage][0]}</div></div></div>
+          <div style={{ display: "flex", alignItems: "center" }}><div><b style={{ letterSpacing: ".1em" }}>BERYL LIVE STUDIO</b><div style={lbl}>Instant Presence · mirror · {ST[stage][0]}</div></div><div style={{ flex: 1 }} />
+            <span style={{ fontSize: 11, fontFamily: "monospace", border: `1px solid ${BORDER}`, borderRadius: 999, padding: "3px 10px", color: online ? OK : BAD }}>● Backend {online ? "online" : "offline"}</span></div>
           <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", border: `1px solid ${BORDER}`, aspectRatio: "1 / 1", background: "#000" }}>
             <img src={portrait} alt="Beryl" style={{ width: "100%", height: "100%", objectFit: "cover", transform: talking ? "scale(1.015)" : "none", transition: "transform .3s" }} />
             <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontFamily: "monospace", background: "rgba(0,0,0,.6)", padding: "2px 8px", borderRadius: 4, color: "#fff" }}><span style={{ color: BAD }}>●</span> {talking ? "SPEAKING" : "LIVE"}</span>
@@ -304,24 +405,27 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
               <div style={{ fontWeight: 800, letterSpacing: ".3em", fontSize: 20 }}>BERYL</div><div style={{ fontSize: 11, color: "#cfc6dc" }}>Beryl Labs · Phase One · {ST[stage][2]}</div></div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
-            <button style={btn(talking)} onClick={() => setTalking(t => !t)}>● Talk</button>
-            <button style={btn()} onClick={speak}>↑ Speak</button>
+            <button style={btn(!!recRef.current || talking)} onClick={listen}>● Talk</button>
+            <button style={btn()} onClick={() => reply ? say(reply) : speak()}>↑ Speak</button>
             <button style={btn(true)} onClick={() => { const i = active.findIndex(a => a.id === sel); swap(active[(i + 1) % active.length]); }}>⟳ Cycle node</button>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}><span style={lbl}>BLENDSHAPES</span><span style={lbl}>ARKIT 52 · DEMO SIGNAL</span></div>
+          {(heard || reply) && <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: 8, fontSize: 12, lineHeight: 1.5 }}>
+            {heard && <div><span style={lbl}>YOU </span>{heard}</div>}{reply && <div><span style={{ ...lbl, color: GOLD }}>BERYL </span>{reply}</div>}</div>}
+          <div style={{ display: "flex", justifyContent: "space-between" }}><span style={lbl}>BLENDSHAPES</span><span style={lbl}>ARKIT 52 · {modelOf(byId.a2f).n.toUpperCase().replace("AUDIO2FACE-3D", "A2F-3D")} (SIM)</span></div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 14px" }}>
             {SH.map((s, i) => <div key={s}><div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, fontFamily: "monospace", color: "#c9c0d6" }}><span>{s}</span><span>{bs[i].toFixed(2)}</span></div>
               <div style={{ height: 3, background: "#241a30", borderRadius: 2 }}><div style={{ height: 3, width: `${Math.min(1, bs[i]) * 100}%`, background: "#7c6cf0", borderRadius: 2 }} /></div></div>)}
           </div>
-          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: 10, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: 10, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+            <div><div style={lbl}>DRIFT</div><b style={{ color: Math.abs(clk.drift) < 50 ? OK : WARN }}>{clk.drift.toFixed(1)}ms</b></div>
+            <div><div style={lbl}>SKEW</div><b style={{ color: Math.abs(clk.skew) < 20 ? OK : WARN }}>{clk.skew >= 0 ? "+" : ""}{clk.skew.toFixed(1)}ms</b></div>
             <div><div style={lbl}>E2E BUDGET</div><b style={{ color: e2e <= 900 ? OK : WARN }}>{e2e}ms</b></div>
-            <div><div style={lbl}>TOKKIO REF</div><b>{TOKKIO_BUDGET_MS}ms</b></div>
             <div><div style={lbl}>STAGE</div><b>{ST[stage][0]}</b></div>
           </div>
           <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: 10, fontSize: 11, color: "#c9c0d6", lineHeight: 1.5 }}>
             <div style={lbl}>STATUS</div>{toast}
-            <div style={{ ...lbl, marginTop: 8 }}>STAGE CONTRACTS</div>Control plane &lt;1s always · Data plane warms cold.<br />
-            Budgets are published per-model targets; TEST shows measured numbers.
+            <div style={{ ...lbl, marginTop: 8 }}>STAGE CONTRACTS</div><b>Control plane</b> &lt;1s always<br /><b>Data plane</b> warms cold<br />
+            <span style={{ color: MUTED }}>E2E {e2e}ms vs Tokkio {TOKKIO_BUDGET_MS}ms. Budgets are targets; TEST shows measured numbers.</span>
           </div>
         </aside>
       </div>

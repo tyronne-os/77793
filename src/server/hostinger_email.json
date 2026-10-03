@@ -1,0 +1,31 @@
+{
+  "provider": "hostinger",
+  "smtp": {
+    "host": "smtp.hostinger.com",
+    "port": 465,
+    "tls": "ssl",
+    "from_env": "HOSTINGER_EMAIL",
+    "pass_env": "HOSTINGER_SMTP_PASS"
+  },
+  "imap": {
+    "host": "imap.hostinger.com",
+    "port": 993,
+    "tls": true,
+    "from_env": "HOSTINGER_EMAIL",
+    "pass_env": "HOSTINGER_SMTP_PASS"
+  },
+  "api": {
+    "base": "https://api.hostinger.com/v1",
+    "key_env": "HOSTINGER_API_KEY"
+  },
+  "agent_tasks": [
+    "send_build_report",
+    "send_pr_summary",
+    "send_alert",
+    "send_daily_digest",
+    "read_inbox_for_tasks",
+    "reply_to_flagged"
+  ],
+  "inbox_poll_interval_sec": 300,
+  "label_for_agent_tasks": "CRANE-TASK"
+}

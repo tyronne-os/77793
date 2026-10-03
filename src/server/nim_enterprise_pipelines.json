@@ -1,0 +1,26 @@
+{
+  "nim-nemotron-340b": {
+    "url": "https://integrate.api.nvidia.com/v1",
+    "model": "nvidia/nemotron-4-340b-instruct",
+    "api_key_env": "NGC_ENTERPRISE_KEY",
+    "concurrency": 2,
+    "label": "NIM Nemotron-4 340B (Enterprise)",
+    "tier": "nim-enterprise"
+  },
+  "nim-nemotron-70b-ent": {
+    "url": "https://integrate.api.nvidia.com/v1",
+    "model": "nvidia/llama-3.1-nemotron-70b-instruct",
+    "api_key_env": "NGC_ENTERPRISE_KEY",
+    "concurrency": 4,
+    "label": "NIM Nemotron 70B (Enterprise key)",
+    "tier": "nim-enterprise"
+  },
+  "nim-parakeet-asr": {
+    "url": "https://ai.api.nvidia.com/v1/asr/nvidia/parakeet-ctc-1-1b",
+    "model": "nvidia/parakeet-ctc-1-1b",
+    "api_key_env": "NGC_ENTERPRISE_KEY",
+    "concurrency": 4,
+    "label": "NIM Parakeet ASR (Enterprise)",
+    "tier": "nim-enterprise"
+  }
+}

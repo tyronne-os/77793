@@ -1,0 +1,29 @@
+{
+  "nim-nemotron-70b": {
+    "url": "https://integrate.api.nvidia.com/v1",
+    "model": "nvidia/llama-3.1-nemotron-70b-instruct",
+    "api_key_env": "NGC_API_KEY",
+    "concurrency": 4,
+    "label": "NIM Nemotron 70B",
+    "tier": "nim",
+    "notes": "NVIDIA NIM cloud — Tokkio Model-1 baseline chat layer"
+  },
+  "nim-llama3-8b": {
+    "url": "https://integrate.api.nvidia.com/v1",
+    "model": "meta/llama-3.1-8b-instruct",
+    "api_key_env": "NGC_API_KEY",
+    "concurrency": 8,
+    "label": "NIM Llama 3.1 8B",
+    "tier": "nim",
+    "notes": "NVIDIA NIM cloud — fast 8B speed baseline"
+  },
+  "nim-mistral-nemo": {
+    "url": "https://integrate.api.nvidia.com/v1",
+    "model": "mistralai/mistral-nemo-12b-instruct",
+    "api_key_env": "NGC_API_KEY",
+    "concurrency": 8,
+    "label": "NIM Mistral Nemo 12B",
+    "tier": "nim",
+    "notes": "NVIDIA NIM cloud — Mistral Nemo 12B"
+  }
+}

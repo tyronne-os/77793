@@ -47,9 +47,9 @@ def _nim_client() -> AsyncOpenAI | None:
 
 # Preferred NIM models in order (Qwen first if available on NIM, else Nemotron)
 _NIM_MODELS = [
-    "qwen/qwen2.5-coder-32b-instruct",
-    "nvidia/llama-3.1-nemotron-70b-instruct",
-    "meta/llama-3.1-70b-instruct",
+    "google/gemma-4-31b-it",
+    "meta/llama-3.2-90b-vision-instruct",
+    "openai/gpt-oss-20b",
 ]
 
 # ── System prompts ─────────────────────────────────────────────────────────────
@@ -327,7 +327,7 @@ async def handle(ws, history: list[dict], text: str, active_file: str | None,
     mode_block = _MODE_PLAN if mode == "plan" else _MODE_AUTO
     system = berylize.persona(model) + "\n\n" + (_BASE + mode_block).format(
         mm_url=MM_URL, nim_url=NIM_URL, hf_mm_url=HF_MM_URL or "not yet deployed",
-        timeout=CMD_TIMEOUT, project=WS.root.name, tree=tree, active=active
+        timeout=CMD_TIMEOUT, project=(WS.root.name if WS.root else "none"), tree=tree, active=active
     )
     # Second brain: secondary, retrieval-based knowledge (Obsidian vault). Empty when off-topic or disabled.
     if rerank:

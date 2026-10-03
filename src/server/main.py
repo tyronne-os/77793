@@ -21,7 +21,7 @@ import coderag
 import engineers
 import jev
 import mcp_server
-import multiavatar, modellab
+import multiavatar, modellab, deploy
 from files import WS
 
 app = FastAPI(title="CRANE")
@@ -31,6 +31,7 @@ app.include_router(mcp_server.router)
 app.include_router(multiavatar.router)
 app.include_router(jev.router)
 app.include_router(modellab.router)
+app.include_router(deploy.router)
 app.include_router(engineers.router)
 STATIC = Path(__file__).parent / "static"
 ALLOWED_HOSTS = {"localhost", "127.0.0.1"}   # the terminal socket is a shell: loopback origins only
