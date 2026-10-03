@@ -1,149 +1,104 @@
-# CRANE Builder IDE — Phase 1 Handoff
+# CRANE Session Handoff — 2026-10-03
 
-## What was built
+## What's Done This Session
 
-CRANE is a self-hosted, browser-based AI IDE running at `http://localhost:8000`. It pairs a local AI coding agent (Qwen2.5-Coder via a GCP GPU node) with a full development environment: code editor, live preview, terminal, container management, and secure credential storage.
+### UI: Nav Bar + Mastering Suite
+- **Nav bar** added to CRANE IDE header: HOME / BUILD / MASTERING / BACKEND / REPORTS tabs
+- **HOME** button = `<a href="/">` back to landing page
+- **MasteringPanel.tsx** — full animated talking avatar:
+  - Mic → Web Speech API (STT) → `/ws/avatar-chat` → Berylize (streaming tokens) → TTS → animated SVG face
+  - TTS priority chain: Kokoro → Speaches → browser SpeechSynthesis
+  - Eye blink, mouth animation, idle/listening/thinking/speaking state machine
+- **`/ws/avatar-chat`** WebSocket in `main.py` — isolated chat history per session
+
+### Infrastructure: berylize-node
+- **Podman** replacing Docker permanently — Docker + containerd disabled at boot
+- **speaches TTS container** running as `elana-voice`:
+  - `podman run -d --name elana-voice -p 127.0.0.1:8013:8000 ghcr.io/speaches-ai/speaches:latest-cuda`
+  - Kokoro-82M-v1.0-ONNX-int8 model loaded (CPU inference, no GPU needed)
+  - Health: `http://localhost:8013/health` → OK
+- **vLLM** (`berylize-vllm.service`) restarted with fixed config:
+  - `--max-model-len 8192` (down from 16384 — was OOMing KV cache at 16k)
+  - `--gpu-memory-utilization 0.93` (up from 0.90)
+  - Port 8010 not yet open — ~15 min for shard load + CUDA graph capture
 
 ---
 
-## Architecture
+## What Needs Finishing (Resume Here)
 
+### 1. Wait for vLLM Port 8010
+vLLM is loading right now. All 5 safetensors shards (~18GB AWQ) take ~11 min then CUDA graphs ~5 min.
+
+Check: `curl -s http://localhost:8010/v1/models`
+
+If it fails again with same OOM ValueError, the next fix is adding env var to the service:
 ```
-/mnt/elana/ai_apps/crane/
-  src/
-    server/          FastAPI backend (port 8000)
-      main.py        REST + WebSocket routes
-      chat.py        Qwen streaming + tool calls (read/write/run file ops)
-      files.py       File tree, read/write, watchdog broadcast
-      terminal.py    ptyprocess shell ↔ xterm.js WebSocket
-      process.py     Project dev-server lifecycle (port 8001)
-      gpu.py         GCP berylize-node GPU metrics + start/pause
-      vault.py       Secure credential store + usage logging
-      podman.py      Podman/Docker container management
-      static/        Vite production build (served by FastAPI)
-    client/          React + Vite frontend
-      src/
-        App.tsx              Main layout, panel state, WebSocket orchestration
-        components/
-          ChatPanel.tsx      Composer with code blocks, GitHub picker, voice
-          CodePanel.tsx      CodeMirror 6 editor with AI streaming
-          TerminalPanel.tsx  xterm.js — LOCAL / GCP / NVIDIA tabs, Split/Close
-          BackendPanel.tsx   React Flow graph — Qwen, MiniMax, Kokoro nodes
-          PodmanPanel.tsx    Container manager (8 tabs, 10 features)
-          VaultPanel.tsx     Token vault + Usage Report tab
-          GpuMeter.tsx       GPU stats / start / pause
-          PreviewPanel.tsx   iframe → port 8001
-          FileTree.tsx       Project file navigator
-  projects/          One subdirectory per user project
-  run_crane.sh       Launcher (starts server + Hermes if configured)
+Environment=VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0
 ```
+Then `systemctl daemon-reload && systemctl restart berylize-vllm`
 
----
-
-## Key design decisions
-
-| Decision | Rationale |
-|---|---|
-| FastAPI + uvicorn (port 8000) | Async WebSocket support, single process serving both API and static files |
-| React + Vite → compiled to `src/server/static/` | No separate dev server in production; `vite build` output served by FastAPI |
-| Local `~/.crane_vault.env` (chmod 600) | API keys never leave the machine, never committed, never returned by API |
-| `~/.crane_usage.json` | Tracks per-service usage (tokens, caller, device) without hitting third-party dashboards |
-| Qwen OpenAI-compat endpoint | Qwen at port 8010 speaks the OpenAI streaming API — same SDK, zero extra deps |
-| xterm.js + ptyprocess | Standard terminal stack (same as VS Code); handles resize, colors, binary PTY output |
-| React Flow for BackendPanel | Graph layout handles node positions without manual CSS; `_dispatch` module-level ref avoids re-mount issues |
-| Podman over Docker | Rootless, no daemon, systemd integration, Kubernetes-compatible pods |
-
----
-
-## Services / Ports
-
-| Port | Service |
-|---|---|
-| 8000 | CRANE API + static UI |
-| 8001 | Project preview dev server |
-| 8010 | Qwen2.5-Coder (SSH tunnel from berylize-node) |
-| 8011 | MiniMax H3 (SSH tunnel or ZeroGPU Space) |
-| 8012 | Kokoro TTS (kokoro-onnx serve) |
-
----
-
-## Credentials (stored in `~/.crane_vault.env`)
-
-| Service | Env var |
-|---|---|
-| Hugging Face | `HF_TOKEN` |
-| GitHub | `GITHUB_TOKEN` |
-| NVIDIA NGC | `NGC_API_KEY` |
-| NVIDIA Enterprise | `NVIDIA_ENT_KEY` |
-| Google Cloud | `GCP_AUTH` (gcloud CLI) |
-| JEV | `JEV_API_KEY` |
-| Gemini | `GEMINI_API_KEY` |
-| OpenAI | `OPENAI_API_KEY` |
-| College Football | `CFB_API_KEY` |
-| Tank01 | `TANK_API_KEY` |
-| Hostinger | `HOSTINGER_API_KEY` |
-
----
-
-## GCP GPU Node (berylize-node)
-
-- Project: `posh-eden`, zone `us-east1-c`, machine `g2-standard-4` + NVIDIA L4
-- Cost: ~$0.40/hr when running
-- **$240 credits expire 2026-11-01**
-- Auto-pauses after idle timeout (configurable in GPU panel)
-- `run_crane.sh` handles SSH tunnel setup before launching Hermes/CRANE
-
----
-
-## Phase 1 complete — all features shipped
-
-1. Secure Token Vault (11 services + test endpoints)
-2. Usage Report (per-service: last used, tokens, caller, device)
-3. Terminal: LOCAL / GCP / NVIDIA tabs, Split, Close
-4. Chat code blocks with Copy + ▶ Run (executes in terminal)
-5. BACKEND panel: React Flow graph, Hermes launcher, voice test
-6. Big Proppa color palette applied to full UI
-7. GitHub Codex-style repo picker in composer
-8. Podman panel: 8 tabs, 10 container management features
-9. Terminal accessible without an open project
-10. Chat composer: voice input, file attach, GitHub repo browse
-
----
-
-## Phase 2 TODO
-
-- Autonomous computer-use agents from chat (Anthropic computer-use API)
-- Big Proppa: lock tickets with kickoff timestamp
-- Big Proppa: grader (fill `actual_value`, set HIT/MISS, compute `result_units`)
-- Big Proppa: calibration view (predicted probability vs actual hit rate)
-- Big Proppa: replace parlay EV with "UNPROVEN" until edge proven
-- Podman: install wizard (auto-install via terminal exec)
-- ZeroGPU Space deployment flow (HF token required)
-- MiniMax H3 tunnel setup wizard
-
----
-
-## How to run
-
+### 2. Verify SSH Tunnels Are Still Up
+After any reconnect, the tunnels may have dropped:
 ```bash
-# Start the server
-cd /mnt/elana/ai_apps/crane/src/server
-../.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
-
-# Or use the launcher (also starts Hermes)
-bash /mnt/elana/ai_apps/crane/run_crane.sh
+# Port 8010 (Berylize/vLLM)
+gcloud compute ssh berylize-node --zone=us-east1-c --project=posh-eden -- -L 8010:localhost:8010 -N -f
+# Port 8013 (Speaches TTS)
+gcloud compute ssh berylize-node --zone=us-east1-c --project=posh-eden -- -L 8013:localhost:8013 -N -f
 ```
 
-Then open http://localhost:8000 in a browser.
+### 3. Test Speaches TTS via CRANE proxy
+The `/api/services/speaches/tts` endpoint in `main.py` proxies to port 8013. Test:
+```bash
+curl -s -X POST http://localhost:8000/api/services/speaches/tts \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Hello from the avatar"}'
+```
+Expected: `{"ok": true, "audio_b64": "...", "content_type": "audio/wav"}`
+
+If it returns `{"ok": false}`: check that `elana-voice` container is still running on berylize-node and the 8013 tunnel is live.
+
+### 4. Test the Full Avatar Pipeline
+1. Open CRANE → click MASTERING tab
+2. Click mic button → speak something
+3. Avatar should go: idle → listening → thinking → speaking
+4. If TTS mode = speaches, audio comes back base64 from `/api/services/speaches/tts`
+
+### 5. REPORTS Tab (Not Implemented)
+Nav shows REPORTS but clicking it does nothing useful. Backend panel and Build panel exist; Reports panel is a stub.
 
 ---
 
-## Update — 2026-10-02
+## Port Map (Reserved + Active)
+| Port | Service |
+|------|---------|
+| 8000 | CRANE FastAPI |
+| 8001 | CRANE preview |
+| 8002–8005 | CRANE reserved |
+| 8010 | Berylize vLLM (Qwen2.5-Coder-32B-Instruct-AWQ) |
+| 8011 | Berylize Creatives (MiniMax H3 — NOT YET SERVED) |
+| 8012 | Kokoro TTS (standalone — NOT yet started) |
+| 8013 | Speaches TTS (elana-voice Podman container) ✅ |
 
-- Repo renamed to **tyronne-os/CRANE-IT** on GitHub: https://github.com/tyronne-os/CRANE-IT
-- Local path: `/mnt/elana/ai_apps/crane`
-- Reference folder: `~/Downloads/CRANE IT`
-- All Phase 1 features committed and pushed
-- Podman panel, server podman routes, and `podman-workstation/` added
-- CRANE IDE confirmed running at `http://localhost:8000`
-- GPU offline (berylize-node not tunneled) — run `run_crane.sh` to activate
+---
+
+## Key Files Changed This Session
+- `src/server/main.py` — `/ws/avatar-chat`, `/api/services/speaches/tts`
+- `src/server/gpu.py` — `CRANE_GPU_IDLE` env var (0 = never pause)
+- `src/client/src/App.tsx` — nav bar, MasteringPanel import
+- `src/client/src/components/MasteringPanel.tsx` — NEW: full avatar component
+- `src/client/src/styles.css` — nav bar + mastering styles appended
+- `scripts/start_berylize_node.sh` — `vllm serve` (replaces deprecated module invocation)
+
+## On berylize-node (not in git)
+- `/etc/systemd/system/berylize-vllm.service` — systemd unit, updated max-model-len 8192, gpu-util 0.93
+- `elana-voice` Podman container — started each boot manually (no systemd unit yet)
+  - Consider adding a systemd unit for it: `podman generate systemd elana-voice`
+
+---
+
+## Known Issues
+- **Podman 3.4.4** on berylize-node doesn't support CDI `--device nvidia.com/gpu=all` syntax
+  - Speaches Kokoro ONNX runs fine on CPU — no GPU flag needed
+  - If you need GPU in a future container, use `--device /dev/nvidia0 --device /dev/nvidiactl --device /dev/nvidia-uvm`
+- **elana-voice** Podman container is NOT set up to restart on reboot yet
+- **MiniMax H3** weights are on nvme0n2 but vLLM serving not configured
