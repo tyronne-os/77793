@@ -111,7 +111,7 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
   const [sel, setSel] = useState("agt");
   const [pick, setPick] = useState<Record<string, string>>(saved.pick || {});     // node id -> model name
   const [over, setOver] = useState<Record<string, string>>(saved.over || {});     // "node.field" -> value
-  const [tab, setTab] = useState<"inspector" | "wiring" | "code">("inspector");
+  const [tab, setTab] = useState<"inspector" | "wiring" | "triage">("inspector");
   const [health, setHealth] = useState<Record<string, Health>>({});
   const [sources, setSources] = useState<Source[]>([]);
   const [online, setOnline] = useState(false);
@@ -292,6 +292,12 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [downKey, stateKey, open, connected]);
   useEffect(() => { if (!openIncs.length) return; const t = setInterval(() => setNowT(Date.now()), 1000); return () => clearInterval(t); }, [openIncs.length]);
+  // Auto-route bottom panel: triage when red, inspector when all clear
+  useEffect(() => {
+    if (openIncs.length > 0) { setTab("triage"); setInspOpen(true); }
+    else if (tab === "triage") setTab("inspector");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openIncs.length]);
   useEffect(() => {
     if (!openIncs.length || !autoRetry || !connected) return;
     const t = setInterval(async () => {
@@ -550,7 +556,7 @@ if __name__ == "__main__":
         </div>
       )}
 
-      <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "minmax(0,1fr) 360px" }}>
+      <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "minmax(0,1fr) 450px" }}>
         {/* ── left: graph + inspector */}
         <div style={{ display: "grid", gridTemplateRows: "auto minmax(0,1fr) auto", minHeight: 0, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", flexWrap: "wrap" }}>
@@ -605,20 +611,64 @@ if __name__ == "__main__":
             </div>
           </div>
 
-          {/* inspector */}
-          <div style={{ borderTop: `1px solid ${BORDER}`, background: "#0c0813" }}>
+          {/* bottom panel — triage when red, inspector when clear */}
+          <div style={{ borderTop: `2px solid ${openIncs.length ? RED : BORDER}`, background: openIncs.length ? "#110508" : "#0c0813",
+            boxShadow: openIncs.length ? `0 -4px 24px ${RED}44` : "none", transition: "all .3s" }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 14px", flexWrap: "wrap" }}>
+              {openIncs.length > 0 && (
+                <button style={{ ...btn(tab === "triage"), borderColor: RED, color: tab === "triage" ? "#fff" : RED, background: tab === "triage" ? RED : "#2a0a10",
+                  animation: "pulse-red 1.2s infinite" }} onClick={() => { setTab("triage"); setInspOpen(true); }}>
+                  ● TRIAGE {openIncs.length} RED
+                </button>)}
               <button style={btn(tab === "inspector")} onClick={() => { setTab("inspector"); setInspOpen(true); }}>NODE INSPECTOR</button>
               <button style={btn(tab === "wiring")} onClick={() => { setTab("wiring"); setInspOpen(true); }}>WIRING SPEC</button>
               <select aria-label="Quick actions" value="" style={{ ...btn(), width: 36, padding: "6px 4px" }} onChange={e => { const v = e.target.value;
                 if (v === "beryl" || v === "tokkio") applyPreset(v); else if (v === "reset") { setPick({}); setOver({}); setHealth({}); setToast("Reset to defaults."); } else if (v === "all") testAll(); }}>
                 <option value="">▾</option><option value="beryl">Load BERYL preset</option><option value="tokkio">Load TOKKIO baseline</option><option value="all">Test all nodes</option><option value="reset">Reset to defaults</option></select>
               <div style={{ flex: 1 }} />
-              <button style={btn()} onClick={() => copy(JSON.stringify(spec, null, 2), "Wiring spec copied to clipboard.")}>⧉ Copy spec</button>
-              <button style={btn()} onClick={download}>↓ .json</button>
+              {tab === "triage" && <><label style={{ ...lbl, display: "flex", gap: 4, alignItems: "center", cursor: "pointer" }}><input type="checkbox" checked={autoRetry} onChange={e => setAutoRetry(e.target.checked)} />AUTO-RETEST 20s</label>
+                <a href="/api/reports/triage/export" download="triage_reports.json" style={{ ...lbl, color: "#76b900" }}>↓ EXPORT</a></>}
+              {tab !== "triage" && <><button style={btn()} onClick={() => copy(JSON.stringify(spec, null, 2), "Wiring spec copied to clipboard.")}>⧉ Copy spec</button>
+                <button style={btn()} onClick={download}>↓ .json</button></>}
               <button style={{ ...btn(), padding: "6px 10px", fontSize: 13, lineHeight: 1 }} title={inspOpen ? "Collapse panel" : "Expand panel"} onClick={() => setInspOpen(o => !o)}>{inspOpen ? "▾" : "▴"}</button>
             </div>
-            {inspOpen && (tab === "wiring" ? <pre style={{ margin: 0, padding: "0 14px 12px", fontSize: 11, color: "#c9c0d6", whiteSpace: "pre-wrap", maxHeight: 260, overflowY: "auto" }}>{JSON.stringify(spec, null, 2)}</pre> : (
+
+            {inspOpen && tab === "triage" && (
+              <div style={{ padding: "0 14px 14px" }}>
+                {incs.length === 0 && <span style={{ fontSize: 11, color: MUTED, padding: "4px 0", display: "block" }}>Watching the pipeline. Each node that goes red gets its own red alert here.</span>}
+                <div style={{ display: "flex", gap: 10, overflowX: openIncs.length >= 3 ? "auto" : undefined, scrollSnapType: openIncs.length >= 3 ? "x mandatory" : undefined, paddingBottom: 4 }}>
+                  {[...incs].sort((x, y) => (x.end ? 1 : 0) - (y.end ? 1 : 0) || x.start - y.start).map(i => {
+                    const n = Math.max(1, Math.min(incs.length, 3)), done = !!i.end, c = done ? OK : RED;
+                    return (
+                      <div key={i.id} style={{ flex: openIncs.length >= 3 ? "0 0 340px" : `1 1 calc(${100 / n}% - 10px)`, minWidth: 220, scrollSnapAlign: "start",
+                        border: `2px solid ${c}`, borderRadius: 10, padding: "10px 12px", background: done ? "#071410" : "#180510",
+                        boxShadow: done ? "none" : `0 0 20px ${RED}55, inset 0 0 10px ${RED}22`, display: "grid", gap: 5, alignContent: "start" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <b style={{ color: c, fontSize: 15, letterSpacing: ".12em" }}>
+                            {done ? "✓ " : "● "}{i.tag} {done ? "RESOLVED" : "RED ALERT"}
+                          </b>
+                          <span style={{ fontSize: 9, background: done ? "#0a2010" : "#2a0510", color: c, border: `1px solid ${c}55`, borderRadius: 4, padding: "2px 6px", fontFamily: "monospace" }}>{i.code}</span>
+                        </div>
+                        <b style={{ fontSize: 30, color: c, letterSpacing: ".06em", fontFamily: "monospace", lineHeight: 1 }}>{fmt((i.end ?? nowT) - i.start)}</b>
+                        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 10, color: MUTED, fontFamily: "monospace" }}>round {i.rounds}</span>
+                          {i.resolvedBy && <span style={{ fontSize: 10, background: "#071a04", color: OK, border: `1px solid ${OK}55`, borderRadius: 3, padding: "0 5px" }}>✓ {i.resolvedBy}</span>}
+                        </div>
+                        <div style={{ maxHeight: 140, overflowY: "auto", display: "grid", gap: 3, borderTop: `1px solid ${c}33`, paddingTop: 5 }}>
+                          {[...i.feed].reverse().map((f, k) => (
+                            <div key={k} style={{ fontSize: 10.5, lineHeight: 1.35, color: f.who === "LEAD" ? "#ede0b8" : "#c9c0d6" }}>
+                              <span style={{ color: MUTED }}>{new Date(f.t).toLocaleTimeString([], { hour12: false })} </span>
+                              <b style={{ color: f.who === "LEAD" ? "#f6d775" : "#9a90a8" }}>{f.who}</b> {f.text}
+                            </div>))}
+                        </div>
+                      </div>);
+                  })}
+                </div>
+              </div>)}
+
+            {inspOpen && tab === "wiring" && <pre style={{ margin: 0, padding: "0 14px 12px", fontSize: 11, color: "#c9c0d6", whiteSpace: "pre-wrap", maxHeight: 260, overflowY: "auto" }}>{JSON.stringify(spec, null, 2)}</pre>}
+
+            {inspOpen && tab === "inspector" && (
               <div style={{ display: "grid", gap: 8, padding: "0 14px 12px", maxHeight: 260, overflowY: "auto" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
                   <span style={{ fontSize: 11, fontFamily: "monospace", background: sk[1], color: sk[2], padding: "1px 7px", borderRadius: 4 }}>{sn.tag}</span>
@@ -642,66 +692,23 @@ if __name__ == "__main__":
                   {([["ENDPOINT", "endpoint", endpointOf(sn)], ["PORT", "port", sm.port], ["API KEY ENV VAR (name only)", "key", sm.key], ["LATENCY BUDGET (MS)", "budget", sm.ms * 2 || 50]] as [string, string, string | number][]).map(([l, f, d]) =>
                     <label key={f} style={{ display: "grid", gap: 3 }}><span style={lbl}>{l}</span><input style={inp} value={ov(sn, f, d)} onChange={setF(f)} /></label>)}
                 </div>
-              </div>))}
+              </div>)}
           </div>
         </div>
 
-        {/* ── right: live studio */}
+        {/* ── right: live studio — full model view */}
         <aside style={{ borderLeft: `1px solid ${BORDER}`, background: "#0c0813", padding: 14, overflowY: "auto", display: "grid", gap: 10, alignContent: "start" }}>
-            <div style={{ background: "rgba(12,8,19,.94)", borderRadius: 10, fontFamily: "monospace",
-              border: `1px solid ${openIncs.length ? RED : incs.length ? GREEN : BORDER}`, boxShadow: openIncs.length ? `0 0 18px ${RED}66` : "none" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", cursor: "pointer" }} onClick={() => setTriageOpen(o => !o)}>
-                <span style={{ ...lbl, color: FG }}>TRIAGE</span>
-                <b style={{ fontSize: 15, color: openIncs.length ? RED : incs.length ? GREEN : MUTED }}>{openIncs.length ? `● ${openIncs.length} RED` : !connected ? "OFFLINE" : "ALL CLEAR"}</b>
-                <span style={{ fontSize: 10, color: MUTED }}>{incs.length} logged · {incs.filter(i => i.end).length} resolved</span>
-                <span style={{ flex: 1 }} /><span style={{ color: MUTED }}>{triageOpen ? "▾" : "▸"}</span>
-              </div>
-              {triageOpen && <div style={{ borderTop: `1px solid ${BORDER}`, padding: "6px 10px 8px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-                  <span style={lbl}>AGENTIC LEAD</span><span style={{ flex: 1 }} />
-                  <label style={{ ...lbl, display: "flex", gap: 4, alignItems: "center", cursor: "pointer" }}><input type="checkbox" checked={autoRetry} onChange={e => setAutoRetry(e.target.checked)} />AUTO-RETEST 20s</label>
-                </div>
-                <div style={{ marginBottom: 6, display: "grid", gap: 2 }}>
-                  <span style={lbl}>GPU HEADROOM (estimate)</span>
-                  {gpuUse.length === 0 && <span style={{ fontSize: 11, color: MUTED }}>No self-hosted GPU model in this pipeline. NVIDIA NIM nodes run on NVIDIA's cloud GPUs.</span>}
-                  {gpuUse.map(([h, u]) => { const [nm, cap] = GPU_HOST[h] || [h, 0], pct = cap ? u.gb / cap : 0, off = sources.find(x => x.name === h)?.online === false;
-                    const c = off || pct > 0.95 ? RED : pct > 0.8 ? WARN : GREEN;
-                    return <div key={h} style={{ fontSize: 11, color: c }}>{nm}: ~{u.gb}/{cap} GB ({Math.round(pct * 100)}%){pct > 0.95 ? " NOT ENOUGH" : pct > 0.8 ? " TIGHT" : " ok"}{off ? " · host OFFLINE, cannot confirm" : ""}
-                      <span style={{ color: MUTED }}> {u.names.join(", ")}</span></div>; })}
-                  {slowIds.map(i => <div key={i} style={{ fontSize: 11, color: WARN }}>SLOW {byIdN(i).tag}: {health[i].ms}ms &gt; {ov(byIdN(i), "budget", modelOf(byIdN(i)).ms * 2 || 50)}ms budget</div>)}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-                  <span style={lbl}>INCIDENTS — one clock per red node, nothing is cleared</span>
-                  <a href="/api/reports/triage/export" download="triage_reports.json" style={{ ...lbl, color: "#76b900", marginLeft: "auto" }}>↓ EXPORT</a>
-                </div>
-                {incs.length === 0 && <span style={{ fontSize: 11, color: MUTED }}>Watching the pipeline. Each node that goes red gets its own clock and log here.</span>}
-                <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollSnapType: "x mandatory", paddingBottom: 6 }}>
-                  {[...incs].sort((x, y) => (x.end ? 1 : 0) - (y.end ? 1 : 0) || x.start - y.start).map(i => {
-                    const n = Math.min(incs.length, 3), done = !!i.end, c = done ? GREEN : RED;
-                    return (
-                      <div key={i.id} style={{ flex: `0 0 calc(${100 / n}% - ${(8 * (n - 1)) / n}px)`, minWidth: 150, scrollSnapAlign: "start", border: `1px solid ${c}66`, borderRadius: 8, padding: "6px 8px", background: done ? "#0a1a0e" : "#1a070c", display: "grid", gap: 4, alignContent: "start" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><b style={{ color: c }}>{i.tag}</b><span style={{ ...lbl, color: c }}>{done ? "RESOLVED" : "RED"}</span></div>
-                        <b style={{ fontSize: 22, color: c, letterSpacing: ".05em" }}>{fmt((i.end ?? nowT) - i.start)}</b>
-                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 9, background: "#2a0a10", color: RED, border: `1px solid ${RED}55`, borderRadius: 3, padding: "0 4px" }}>{i.code}</span>
-                          {i.resolvedBy && <span style={{ fontSize: 9, background: "#0a1a04", color: GREEN, border: `1px solid ${GREEN}55`, borderRadius: 3, padding: "0 4px" }}>✓ {i.resolvedBy}</span>}
-                        </div>
-                        <div style={{ maxHeight: 170, overflowY: "auto", display: "grid", gap: 3 }}>
-                          {[...i.feed].reverse().map((f, k) => (
-                            <div key={k} style={{ fontSize: 10.5, lineHeight: 1.35, color: f.who === "LEAD" ? "#ede0b8" : "#c9c0d6" }}>
-                              <span style={{ color: MUTED }}>{new Date(f.t).toLocaleTimeString([], { hour12: false })} </span><b style={{ color: f.who === "LEAD" ? "#f6d775" : "#9a90a8" }}>{f.who}</b> {f.text}
-                            </div>))}
-                        </div>
-                      </div>);
-                  })}
-                </div>
-                {feed.length > 0 && <div style={{ display: "grid", gap: 2, marginTop: 4 }}><span style={lbl}>PIPELINE NOTES</span>
-                  {[...feed].reverse().slice(0, 4).map((f, k) => <div key={k} style={{ fontSize: 10.5, color: "#c9c0d6" }}><span style={{ color: MUTED }}>{new Date(f.t).toLocaleTimeString([], { hour12: false })} </span>{f.text}</div>)}</div>}
-              </div>}
-            </div>
-
           <div style={{ display: "flex", alignItems: "center" }}><div><b style={{ letterSpacing: ".1em" }}>BERYL LIVE STUDIO</b><div style={lbl}>Instant Presence · mirror · {ST[stage][0]}</div></div><div style={{ flex: 1 }} />
             <span style={{ fontSize: 11, fontFamily: "monospace", border: `1px solid ${BORDER}`, borderRadius: 999, padding: "3px 10px", color: online ? OK : BAD }}>● Backend {online ? "online" : "offline"}</span></div>
+          {/* GPU headroom — compact strip */}
+          {gpuUse.length > 0 && <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "6px 10px", display: "grid", gap: 3 }}>
+            <span style={lbl}>GPU HEADROOM</span>
+            {gpuUse.map(([h, u]) => { const [nm, cap] = GPU_HOST[h] || [h, 0], pct = cap ? u.gb / cap : 0, off = sources.find(x => x.name === h)?.online === false;
+              const c = off || pct > 0.95 ? RED : pct > 0.8 ? WARN : GREEN;
+              return <div key={h} style={{ fontSize: 11, color: c }}>{nm}: ~{u.gb}/{cap} GB ({Math.round(pct * 100)}%){pct > 0.95 ? " NOT ENOUGH" : pct > 0.8 ? " TIGHT" : " ok"}{off ? " · OFFLINE" : ""}
+                <span style={{ color: MUTED }}> {u.names.join(", ")}</span></div>; })}
+            {slowIds.map(i => <div key={i} style={{ fontSize: 11, color: WARN }}>SLOW {byIdN(i).tag}: {health[i].ms}ms</div>)}
+          </div>}
           <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", border: `1px solid ${BORDER}`, aspectRatio: "1 / 1", background: "#000" }}>
             <img src={portrait} alt="Beryl" style={{ width: "100%", height: "100%", objectFit: "cover", transform: talking ? "scale(1.015)" : "none", transition: "transform .3s" }} />
             <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontFamily: "monospace", background: "rgba(0,0,0,.6)", padding: "2px 8px", borderRadius: 4, color: "#fff" }}><span style={{ color: BAD }}>●</span> {talking ? "SPEAKING" : "LIVE"}</span>
