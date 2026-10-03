@@ -17,10 +17,12 @@ import podman as _podman
 import process
 import terminal
 import vault
+import coderag
 from files import WS
 
 app = FastAPI(title="CRANE")
 app.include_router(knowledge.router)
+app.include_router(coderag.router)
 STATIC = Path(__file__).parent / "static"
 ALLOWED_HOSTS = {"localhost", "127.0.0.1"}   # the terminal socket is a shell: loopback origins only
 
@@ -206,6 +208,27 @@ async def ws_avatar_chat(ws: WebSocket):
     except WebSocketDisconnect:
         if current:
             current.cancel()
+
+
+@app.websocket("/ws/rag-chat")
+async def ws_rag_chat(ws: WebSocket):
+    """CodeRAG: small Ollama models + Second Brain retrieval. Isolated history per session."""
+    if not origin_ok(ws):
+        return await ws.close(code=1008)
+    await ws.accept()
+    history: list[dict] = []
+    try:
+        while True:
+            msg = await ws.receive_json()
+            if msg.get("type") == "reset":
+                history.clear()
+                await ws.send_json({"type": "reset_ok"})
+                continue
+            model_key = msg.get("model", coderag.DEFAULT_MODEL)
+            await coderag.chat(ws, history, msg["message"], model_key)
+    except WebSocketDisconnect:
+        pass
+
 
 
 @app.post("/api/services/speaches/tts")

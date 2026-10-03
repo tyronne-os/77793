@@ -1,104 +1,214 @@
-# CRANE Session Handoff — 2026-10-03
+# CRANE Session Handoff — 2026-10-03 (All-Night Session)
 
-## What's Done This Session
-
-### UI: Nav Bar + Mastering Suite
-- **Nav bar** added to CRANE IDE header: HOME / BUILD / MASTERING / BACKEND / REPORTS tabs
-- **HOME** button = `<a href="/">` back to landing page
-- **MasteringPanel.tsx** — full animated talking avatar:
-  - Mic → Web Speech API (STT) → `/ws/avatar-chat` → Berylize (streaming tokens) → TTS → animated SVG face
-  - TTS priority chain: Kokoro → Speaches → browser SpeechSynthesis
-  - Eye blink, mouth animation, idle/listening/thinking/speaking state machine
-- **`/ws/avatar-chat`** WebSocket in `main.py` — isolated chat history per session
-
-### Infrastructure: berylize-node
-- **Podman** replacing Docker permanently — Docker + containerd disabled at boot
-- **speaches TTS container** running as `elana-voice`:
-  - `podman run -d --name elana-voice -p 127.0.0.1:8013:8000 ghcr.io/speaches-ai/speaches:latest-cuda`
-  - Kokoro-82M-v1.0-ONNX-int8 model loaded (CPU inference, no GPU needed)
-  - Health: `http://localhost:8013/health` → OK
-- **vLLM** (`berylize-vllm.service`) restarted with fixed config:
-  - `--max-model-len 8192` (down from 16384 — was OOMing KV cache at 16k)
-  - `--gpu-memory-utilization 0.93` (up from 0.90)
-  - Port 8010 not yet open — ~15 min for shard load + CUDA graph capture
+**Next agent: pick up from here. Everything is documented. No gaps.**
 
 ---
 
-## What Needs Finishing (Resume Here)
+## SYSTEM MAP
 
-### 1. Wait for vLLM Port 8010
-vLLM is loading right now. All 5 safetensors shards (~18GB AWQ) take ~11 min then CUDA graphs ~5 min.
-
-Check: `curl -s http://localhost:8010/v1/models`
-
-If it fails again with same OOM ValueError, the next fix is adding env var to the service:
-```
-Environment=VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0
-```
-Then `systemctl daemon-reload && systemctl restart berylize-vllm`
-
-### 2. Verify SSH Tunnels Are Still Up
-After any reconnect, the tunnels may have dropped:
-```bash
-# Port 8010 (Berylize/vLLM)
-gcloud compute ssh berylize-node --zone=us-east1-c --project=posh-eden -- -L 8010:localhost:8010 -N -f
-# Port 8013 (Speaches TTS)
-gcloud compute ssh berylize-node --zone=us-east1-c --project=posh-eden -- -L 8013:localhost:8013 -N -f
-```
-
-### 3. Test Speaches TTS via CRANE proxy
-The `/api/services/speaches/tts` endpoint in `main.py` proxies to port 8013. Test:
-```bash
-curl -s -X POST http://localhost:8000/api/services/speaches/tts \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Hello from the avatar"}'
-```
-Expected: `{"ok": true, "audio_b64": "...", "content_type": "audio/wav"}`
-
-If it returns `{"ok": false}`: check that `elana-voice` container is still running on berylize-node and the 8013 tunnel is live.
-
-### 4. Test the Full Avatar Pipeline
-1. Open CRANE → click MASTERING tab
-2. Click mic button → speak something
-3. Avatar should go: idle → listening → thinking → speaking
-4. If TTS mode = speaches, audio comes back base64 from `/api/services/speaches/tts`
-
-### 5. REPORTS Tab (Not Implemented)
-Nav shows REPORTS but clicking it does nothing useful. Backend panel and Build panel exist; Reports panel is a stub.
+| Component | Location | Status |
+|-----------|----------|--------|
+| CRANE IDE (FastAPI + Vite) | `/mnt/elana/ai_apps/crane/` | Running on localhost:8000 |
+| berylize-node (GCP L4) | `34.74.41.235`, zone `us-east1-c`, project `posh-eden` | VM running |
+| vLLM (Qwen2.5-Coder-14B-Instruct-AWQ) | berylize-node port 8010 | **Loading right now** (~15 min from restart) |
+| Speaches TTS (Kokoro ONNX) | berylize-node port 8013 | ✅ Up, Kokoro model loaded |
+| Hermes Agent | `~/.hermes/` + `~/.local/bin/hermes` | ✅ Configured, JEV installed |
+| SSH Tunnels | local 8010→node 8010, local 8013→node 8013 | Need to verify after each reconnect |
 
 ---
 
-## Port Map (Reserved + Active)
+## PORT MAP (RESERVED + ACTIVE)
+
 | Port | Service |
 |------|---------|
 | 8000 | CRANE FastAPI |
 | 8001 | CRANE preview |
-| 8002–8005 | CRANE reserved |
-| 8010 | Berylize vLLM (Qwen2.5-Coder-32B-Instruct-AWQ) |
-| 8011 | Berylize Creatives (MiniMax H3 — NOT YET SERVED) |
-| 8012 | Kokoro TTS (standalone — NOT yet started) |
-| 8013 | Speaches TTS (elana-voice Podman container) ✅ |
+| 8002–8005 | CRANE reserved (do NOT use) |
+| 8010 | Berylize vLLM (Qwen2.5-Coder-14B-Instruct-AWQ) |
+| 8011 | Berylize Creatives (MiniMax H3 — weights on nvme0n2, NOT yet served) |
+| 8012 | Kokoro TTS standalone (NOT yet started) |
+| 8013 | Speaches TTS / elana-voice Podman container ✅ |
+| 11434 | Ollama (for CodeRAG small models — NOT yet running) |
 
 ---
 
-## Key Files Changed This Session
-- `src/server/main.py` — `/ws/avatar-chat`, `/api/services/speaches/tts`
-- `src/server/gpu.py` — `CRANE_GPU_IDLE` env var (0 = never pause)
-- `src/client/src/App.tsx` — nav bar, MasteringPanel import
-- `src/client/src/components/MasteringPanel.tsx` — NEW: full avatar component
+## WHAT WAS DONE THIS SESSION
+
+### 1. Nav Bar + Mastering Suite (COMPLETE)
+- `src/client/src/App.tsx` — nav bar: HOME / BUILD / MASTERING / BACKEND / REPORTS
+- HOME button = `<a href="/">` for landing page
+- `src/client/src/components/MasteringPanel.tsx` — full animated talking avatar:
+  - Mic → Web Speech API (STT) → `/ws/avatar-chat` → Berylize → TTS → animated SVG face
+  - State machine: idle / listening / thinking / speaking
+  - Eye blink loop, mouth animation driven by sine wave
+  - TTS priority: Kokoro (`/api/services/kokoro/tts`) → Speaches (`/api/services/speaches/tts`) → browser SpeechSynthesis
 - `src/client/src/styles.css` — nav bar + mastering styles appended
-- `scripts/start_berylize_node.sh` — `vllm serve` (replaces deprecated module invocation)
 
-## On berylize-node (not in git)
-- `/etc/systemd/system/berylize-vllm.service` — systemd unit, updated max-model-len 8192, gpu-util 0.93
-- `elana-voice` Podman container — started each boot manually (no systemd unit yet)
-  - Consider adding a systemd unit for it: `podman generate systemd elana-voice`
+### 2. Backend Wiring (COMPLETE)
+- `src/server/main.py`:
+  - `/ws/avatar-chat` — dedicated isolated-history WebSocket for avatar
+  - `/api/services/speaches/tts` — proxies to port 8013 (speaches container)
+  - `/ws/rag-chat` — NEW: CodeRAG WebSocket (Ollama small models + Second Brain)
+  - `import coderag` + `app.include_router(coderag.router)`
+- `src/server/gpu.py` — `CRANE_GPU_IDLE=0` env var disables auto-pause
+- `src/server/coderag.py` — **NEW FILE**: small coder RAG service
+
+### 3. CodeRAG Service (NEW — needs Ollama to be running)
+**File:** `src/server/coderag.py`
+- Three models: `qwen2.5-coder:3b` (default), `phi3.5:latest`, `starcoder2:3b`
+- Each query hits `knowledge.retrieve()` (Second Brain BM25+graph) first
+- Retrieved context + Berylize persona injected as system prompt
+- Streams via Ollama `/api/chat` API
+- REST endpoints: `GET /api/coderag/status`, `POST /api/coderag/pull/{model_key}`
+- Config: `CRANE_OLLAMA_URL` env var (default `http://localhost:11434`)
+- **WebSocket:** `/ws/rag-chat` — send `{"type":"chat","message":"...","model":"qwen-coder-3b"}`
+
+### 4. berylize-node Infrastructure (COMPLETE)
+- **Docker permanently disabled**: `systemctl disable docker docker.socket containerd`
+- **Podman only** — Podman 3.4.4, CDI syntax `nvidia.com/gpu=all` NOT supported
+  - GPU passthrough if needed: `--device /dev/nvidia0 --device /dev/nvidiactl --device /dev/nvidia-uvm`
+- **elana-voice container** (Speaches + Kokoro):
+  ```bash
+  sudo podman run -d --name elana-voice -p 127.0.0.1:8013:8000 \
+    -e UVICORN_HOST=0.0.0.0 -e UVICORN_PORT=8000 \
+    -e WHISPER__TTL=-1 -e DO_NOT_TRACK=1 \
+    ghcr.io/speaches-ai/speaches:latest-cuda
+  # Then load Kokoro:
+  curl -X POST http://localhost:8013/v1/models/speaches-ai%2FKokoro-82M-v1.0-ONNX-int8
+  ```
+  - No GPU flag needed — Kokoro ONNX runs on CPU
+  - **NOT set to restart on boot** — needs a systemd unit: `sudo podman generate systemd elana-voice > /etc/systemd/system/elana-voice.service`
+
+### 5. vLLM Switch: 32B → 14B (IN PROGRESS)
+- Switched from `Qwen2.5-Coder-32B-Instruct-AWQ` to `Qwen2.5-Coder-14B-Instruct-AWQ`
+- Reason: 32B OOM'd on KV cache at 16384 context. 14B fits with 32768 context.
+- AWQ weights downloading to `/mnt/disks/extra-storage/huggingface/` (~9GB, was ~5.6GB complete when checked)
+- Service file: `/etc/systemd/system/berylize-vllm.service`
+  - `--max-model-len 32768 --gpu-memory-utilization 0.90`
+- **Hermes config already has `Qwen/Qwen2.5-Coder-14B-Instruct` as default model** — Hermes is the harness, it auto-connects via port 8010 tunnel
+- vLLM will also serve as fallback: abliterated option `TobiasLogic/Qwen2.5-Coder-32B-abliterated` is in the Hermes config for future use
+
+### 6. Hermes Agent (CONFIRMED + JEV INSTALLED)
+- Location: `~/.hermes/`, binary: `~/.local/bin/hermes`
+- Config: `~/.hermes/config.yaml` — `default_provider: crane_tunnel` → `http://localhost:8010/v1`
+- Paired with CRANE: `~/.hermes/skills/crane/SKILL.md` defines CRANE as the project
+- **JEV plugin installed**: `hermes plugins install jev && hermes plugins enable jev`
+  - Provides `jev_evaluate` tool for decision judging
+  - Location: `~/.hermes/plugins/jev`
+- Hermes model list in config references `Qwen/Qwen2.5-Coder-14B-Instruct` (matches vLLM)
+- Direct fallback: `gcp_vllm_direct` at `http://34.74.41.235:8000/v1`
 
 ---
 
-## Known Issues
-- **Podman 3.4.4** on berylize-node doesn't support CDI `--device nvidia.com/gpu=all` syntax
-  - Speaches Kokoro ONNX runs fine on CPU — no GPU flag needed
-  - If you need GPU in a future container, use `--device /dev/nvidia0 --device /dev/nvidiactl --device /dev/nvidia-uvm`
-- **elana-voice** Podman container is NOT set up to restart on reboot yet
-- **MiniMax H3** weights are on nvme0n2 but vLLM serving not configured
+## IMMEDIATE RESUME TASKS
+
+### A. Verify vLLM is up
+```bash
+curl -s http://localhost:8010/v1/models
+```
+If not: check download completed first:
+```bash
+gcloud compute ssh berylize-node --zone=us-east1-c --project=posh-eden \
+  --command='du -sh /mnt/disks/extra-storage/huggingface/models--Qwen--Qwen2.5-Coder-14B-Instruct-AWQ/blobs/'
+```
+Download complete = ~9.2GB in blobs. Then start service:
+```bash
+gcloud compute ssh berylize-node --zone=us-east1-c --project=posh-eden \
+  --command='sudo systemctl start berylize-vllm && sudo journalctl -fu berylize-vllm'
+```
+
+### B. Verify SSH tunnels
+```bash
+# Check if ports are forwarded
+curl -s --max-time 3 http://localhost:8010/v1/models
+curl -s --max-time 3 http://localhost:8013/health
+```
+If down, re-establish:
+```bash
+gcloud compute ssh berylize-node --zone=us-east1-c --project=posh-eden -- -L 8010:localhost:8010 -N -f
+gcloud compute ssh berylize-node --zone=us-east1-c --project=posh-eden -- -L 8013:localhost:8013 -N -f
+```
+
+### C. Install Ollama + pull small RAG models
+The CodeRAG service (`/ws/rag-chat`) needs Ollama running. Three options:
+1. **On berylize-node** (GPU-accelerated, fastest):
+   ```bash
+   gcloud compute ssh berylize-node --zone=us-east1-c --project=posh-eden \
+     --command='curl -fsSL https://ollama.com/install.sh | sh && \
+       ollama pull qwen2.5-coder:3b && \
+       ollama pull phi3.5 && \
+       ollama pull starcoder2:3b'
+   ```
+   Then add tunnel: `-- -L 11434:localhost:11434 -N -f`
+
+2. **On local CRANE machine** (no GPU, but 3B models run fine on CPU):
+   ```bash
+   curl -fsSL https://ollama.com/install.sh | sh
+   ollama pull qwen2.5-coder:3b
+   ```
+   CRANE_OLLAMA_URL defaults to `http://localhost:11434` — no config needed.
+
+3. **On Hermes machine** (when Lenovo is repaired):
+   Same Ollama install. Set `CRANE_OLLAMA_URL=http://<hermes-ip>:11434` in CRANE's env.
+
+### D. Test full avatar pipeline
+1. Open CRANE → MASTERING tab
+2. Click mic → speak → avatar goes idle→listening→thinking→speaking
+3. Check TTS mode in panel (speaches recommended)
+
+### E. Add systemd unit for elana-voice (so it survives reboots)
+```bash
+gcloud compute ssh berylize-node --zone=us-east1-c --project=posh-eden --command='
+sudo podman generate systemd elana-voice --new > /tmp/elana-voice.service
+sudo cp /tmp/elana-voice.service /etc/systemd/system/
+sudo systemctl enable elana-voice
+sudo systemctl daemon-reload
+'
+```
+
+---
+
+## KNOWN ISSUES / LIMITATIONS
+
+1. **Podman 3.4.4** — `--device nvidia.com/gpu=all` not supported (CDI). Use device files directly if GPU needed in container.
+2. **elana-voice** not auto-starting on reboot (no systemd unit yet)
+3. **CodeRAG** needs Ollama installed — not done yet
+4. **MiniMax H3** weights on nvme0n2 but vLLM serve not configured (port 8011 empty)
+5. **REPORTS tab** in nav bar is a stub — no content
+6. **vLLM OOM history**: if 14B fails on KV cache, add `Environment=VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=0` to service file
+
+---
+
+## KEY FILE PATHS
+
+### CRANE (local)
+| File | Purpose |
+|------|---------|
+| `src/server/main.py` | FastAPI app — all endpoints + WebSockets |
+| `src/server/chat.py` | Main Berylize chat engine (vLLM streaming) |
+| `src/server/coderag.py` | **NEW** CodeRAG small model service |
+| `src/server/knowledge.py` | Second Brain — BM25+graph retrieval over Obsidian vault |
+| `src/server/berylize.py` | Berylize persona + display name |
+| `src/server/gpu.py` | GPU idle timer (CRANE_GPU_IDLE=0 = never pause) |
+| `src/client/src/App.tsx` | Main UI — nav bar, panel routing |
+| `src/client/src/components/MasteringPanel.tsx` | Animated avatar + mic + TTS |
+| `src/client/src/styles.css` | All styles inc. nav + mastering |
+| `knowledge/` | Obsidian vault (Second Brain) |
+| `persona/berylize.md` | Berylize persona text |
+
+### berylize-node (remote)
+| Path | Purpose |
+|------|---------|
+| `/etc/systemd/system/berylize-vllm.service` | vLLM systemd unit |
+| `/mnt/disks/extra-storage/huggingface/` | Model weights cache |
+| `/mnt/disks/extra-storage/envs/vllm-berylize/` | vLLM Python venv |
+| `/tmp/dl14b.log` | 14B download progress |
+
+### Hermes (local)
+| Path | Purpose |
+|------|---------|
+| `~/.hermes/config.yaml` | LLM providers + model list |
+| `~/.hermes/skills/crane/SKILL.md` | CRANE project guidelines for Hermes |
+| `~/.hermes/plugins/jev/` | JEV plugin (just installed) |
+| `~/.hermes/SOUL.md` | Hermes persona/identity |
+| `~/.local/bin/hermes` | CLI binary |
