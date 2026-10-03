@@ -254,7 +254,7 @@ export default function App() {
       </nav>
       <GpuMeter open={gpuOpen} onClose={() => setGpuOpen(false)} />
       <BackendPanel open={backendOpen} onClose={() => { setBackendOpen(false); if (navTab === "backend") setNavTab("build"); }} />
-      <BerylSuite open={suiteOpen} onClose={() => { setSuiteOpen(false); if (navTab === "suite") setNavTab("build"); }} />
+      <BerylSuite open={suiteOpen} onClose={() => { setSuiteOpen(false); if (navTab === "suite") setNavTab("build"); }} onCode={() => setCodeOpen(true)} />
       <CodeAudit open={codeOpen} onClose={() => { setCodeOpen(false); if (navTab === "code") setNavTab("build"); }} />
       <ModelLab open={labOpen} onClose={() => { setLabOpen(false); if (navTab === "lab") setNavTab("build"); }} />
       <MultiSuitePanel open={multiOpen} onClose={() => { setMultiOpen(false); if (navTab === "multi") setNavTab("build"); }} />

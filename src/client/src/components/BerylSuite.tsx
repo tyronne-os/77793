@@ -103,7 +103,7 @@ const lbl: React.CSSProperties = { fontSize: 9, color: MUTED, letterSpacing: ".1
 const store = { get: (): { shape?: string; stage?: number; pick?: Record<string, string>; over?: Record<string, string> } => { try { return JSON.parse(localStorage.getItem("beryl-suite") || "{}"); } catch { return {}; } },
   set: (v: unknown) => { try { localStorage.setItem("beryl-suite", JSON.stringify(v)); } catch { /* storage unavailable */ } } };
 
-export default function BerylSuite({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function BerylSuite({ open, onClose, onCode }: { open: boolean; onClose: () => void; onCode?: () => void }) {
   const saved = useMemo(() => store.get(), []);
   const [shape, setShape] = useState(saved.shape || "circle");
   const [zoom, setZoom] = useState(1);
@@ -562,6 +562,7 @@ if __name__ == "__main__":
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", flexWrap: "wrap" }}>
             <div><div style={{ fontWeight: 800, color: FG, fontSize: 13 }}>PIPELINE</div><div style={lbl}>{N.filter(n => n.stage <= stage).length} nodes · {ST[stage][0]} stage · {hotCount} up</div></div>
             {ST.map((s, i) => <button key={s[0]} style={btn(stage === i)} onClick={() => setStage(i)}>{s[0]} {s[1]}</button>)}
+            {onCode && <button style={{ ...btn(), borderColor: GOLD, color: GOLD }} onClick={onCode} title="Open Code Audit">🧾 CODE</button>}
             <div style={{ flex: 1 }} />
             <button onClick={testAll} title="Click to re-test every active node" style={{ border: 0, cursor: "pointer", borderRadius: 999, padding: "6px 22px", fontFamily: "monospace", fontSize: 12, fontWeight: 700, letterSpacing: ".1em",
               color: "#fff", background: !connected ? "#3a2e46" : hotCount === active.length ? "linear-gradient(90deg,#3b82f6,#a78bfa)" : "linear-gradient(90deg,#92400e,#d97706)" }}>
@@ -620,6 +621,7 @@ if __name__ == "__main__":
                   animation: "pulse-red 1.2s infinite" }} onClick={() => { setTab("triage"); setInspOpen(true); }}>
                   ● TRIAGE {openIncs.length} RED
                 </button>)}
+              {onCode && <button style={{ ...btn(), borderColor: GOLD, color: GOLD }} onClick={onCode} title="Open Code Audit">🧾 CODE</button>}
               <button style={btn(tab === "inspector")} onClick={() => { setTab("inspector"); setInspOpen(true); }}>NODE INSPECTOR</button>
               <button style={btn(tab === "wiring")} onClick={() => { setTab("wiring"); setInspOpen(true); }}>WIRING SPEC</button>
               <select aria-label="Quick actions" value="" style={{ ...btn(), width: 36, padding: "6px 4px" }} onChange={e => { const v = e.target.value;
