@@ -248,3 +248,35 @@ Then: Mastering tab → mic → avatar should go idle→listening→thinking→s
 ## WHAT TO TELL NEXT CLAUDE SESSION
 
 "Continue CRANE setup. HANDOFF.md is at `/mnt/elana/ai_apps/crane/HANDOFF.md`. All 4 local models are pulled to `/mnt/usbpool/ollama`. OpenCode is configured at `~/.config/opencode/opencode.jsonc`. The next tasks are: (1) run `kaggle_ops.sh sync` to get the Kaggle tunnel URL, (2) finish BitNet install, (3) push unpushed commits, (4) reconnect berylize-node."
+
+---
+
+## SESSION UPDATE 2026-10-03 06:35 AM New Orleans (CDT; user wrote "CST") — user has been awake ~24 h
+
+### THE EXACT PROBLEM, AS I UNDERSTAND IT
+The Beryl Suite pipeline graph shows green, but **nothing proves the avatar actually talks**.
+1. **Green != working.** `src/server/deploy.py` probes ASR / TTS / A2F with a **TCP connect only** to `grpc.nvcf.nvidia.com:443`. Only the LLM stage is a real authorized call (1-token NIM request). No audio is ever sent through ASR -> LLM -> TTS -> Audio2Face, so "the avatar does not talk" is **still unverified**, not fixed. This is why the user feels it is "whack-a-mole": the lights never test the real signal path.
+2. **"LLM: NGC_ENTERPRISE_KEY not set"** was caused by me, not the key. I restarted uvicorn without sourcing `~/.hermes/.env`. The key itself is fine (70 chars, `nvapi-` prefix, no quotes/spaces; checked without printing it). Fix: start the API with `scripts/start_crane_api.sh` (sources the env file, then uvicorn). **Any restart that skips this reproduces the error.** After the fix the probe returned LLM "authorized" 346 ms, 6/6 stages live.
+3. **Page "reverting to the deleted page"**: two servers exist. `:8004` = live Vite dev copy (always current). `:8000` = FastAPI serving a **prebuilt snapshot** in `src/server/static` (was stale and still contained the MASTERING panel). Rebuilt with `cd src/client && npx vite build`. `index.html` is now served with `Cache-Control: no-store`. **After any front-end change, `:8000` is stale until rebuilt; use `:8004` for work.** Note `vite build` rewrites `src/server/static` (assets are gitignored, `index.html` is tracked) and can restart uvicorn via --reload.
+4. **Triage clock reset / data wiped** on every new red node (one global incident). Rewritten: **one incident per red node**, each with its own clock, error code and log; open incidents sit side by side (1 = full width, 2 = halves, 3+ = scroll sideways). Incidents are never deleted (localStorage `beryl-incidents`, last 200). An incident only closes when its node is confirmed `hot`/`client` (not while `testing`/`untested`). On close, one record per node is POSTed to `/api/reports/triage` (`src/server/data/triage_reports.jsonl`).
+5. **OV (Omniverse) red** is expected: nothing listens on :8030; it needs its own GPU node. ANM red = nothing on :8015. Neither is a key problem.
+
+### DONE THIS SESSION
+- BerylSuite: GPU meter (vendor GCP·L4, util, VRAM, uptime timer, cost) polling `/api/gpu/status`; collapsible NODE INSPECTOR; IPS Mirror Loop made client-side; per-node triage incidents (above); error-code chips + "resolved by" (auto-retest / manual-test).
+- Backend: `reports.py` (`/api/reports/triage`, `/export`), `source.py` (read-only `/api/source/tree|file`, secret files skipped, key-shaped strings redacted, path traversal blocked).
+- New **CODE tab** (`CodeAudit.tsx`): VS Code style read-only viewer — file tree, tabs, search, the live **generated pipeline code**, and the saved triage log. `CodePanel` gained a `readOnly` prop.
+- **MASTERING tab removed** (user request). `MasteringPanel.tsx` deleted; `AvatarFace` moved to `AvatarFace.tsx` (Multi-Suite uses it).
+- GCP `berylize-node` (L4) started via `/api/gpu/start`.
+
+### OPEN / NOT DONE (priority order)
+1. **Real end-to-end talk test** (speech -> Riva ASR -> LLM -> Riva TTS -> A2F blendshapes) using the NVIDIA Riva python client / A2F gRPC; make the lights reflect it. NVIDIA troubleshooting notes found: TTS/A2F audio sample rate must match (Unreal path is 16 kHz only), A2F burst mode causes jitter -> use `blendshape_streaming_fps: 90`, A2F public API errors ("invalid response from UAM" = bad key).
+2. **NVIDIA CLI/SDK NOT updated**: `ngc` is not installed on this machine and `.venv` has no `pip`. Install `ngc-cli` and `nvidia-riva-client` (use `python -m ensurepip` or a fresh venv).
+3. **GCP berylize-node is RUNNING and billing (~$0.40/h)**. Pause with `POST /api/gpu/pause` when done (auto-pause after 2 h idle). I tried to serve Qwen3.5-9B GGUF with `/usr/local/lib/ollama/llama-server` on remote :8000 (needs sudo; files in `/opt/aurelia/models` are owner-only). **Load success was not verified**; the Ollama systemd unit is broken (`/usr/local/bin/ollama` missing). `vllm` exists at `~/.local/bin/vllm` for user `tjlsudadverified_gmail_com`; a Qwen2.5-Coder-32B-abliterated is in that user's HF cache.
+4. Kaggle tunnel still offline (stale URL in `opencode.jsonc`): restart notebook, `bash scripts/kaggle_ops.sh sync`.
+5. NVIDIA GUIDE dropdown / per-node doc links were built from the Tokkio PDF and are **unverified**; docs moved (301 to `archive.docs.nvidia.com`). Check each URL.
+6. Pipeline codegen (`pipelineCode` in BerylSuite) is template-based and not proven executable; a "CODE" tab inside the node inspector is half-wired (type exists, no button) and now superseded by the top-level CODE tab.
+7. Blendshapes in the live studio are still simulated ("SIM").
+8. Security: `~/.config/opencode/opencode.jsonc` holds API keys in plaintext (outside the repo). Do not commit it. Rotate if it was ever shared.
+
+### NOT COMMITTED ON PURPOSE
+`src/server/data/` (runtime triage log) and `src/server/static/index.html` (build output).

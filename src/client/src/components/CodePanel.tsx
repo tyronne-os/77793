@@ -17,11 +17,11 @@ const lang = (p: string) => {
   return [];
 };
 
-type Props = { path: string | null; content: string; live: boolean; onEdit: (v: string) => void };
+type Props = { path: string | null; content: string; live: boolean; onEdit: (v: string) => void; readOnly?: boolean };
 
 /** CodeMirror 6. `content` changes from outside (file watcher / live stream) are applied
  *  as transactions that keep the cursor and scroll to the newest line while live. */
-export default function CodePanel({ path, content, live, onEdit }: Props) {
+export default function CodePanel({ path, content, live, onEdit, readOnly }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const langC = useRef(new Compartment());
@@ -50,7 +50,7 @@ export default function CodePanel({ path, content, live, onEdit }: Props) {
       lastPath.current = path;
       v.dispatch({ effects: langC.current.reconfigure(path ? lang(path) : []) });
     }
-    v.dispatch({ effects: roC.current.reconfigure(EditorState.readOnly.of(live)) });
+    v.dispatch({ effects: roC.current.reconfigure(EditorState.readOnly.of(live || !!readOnly)) });
     const cur = v.state.doc.toString();
     if (cur !== content) {
       let from = 0;
@@ -60,7 +60,7 @@ export default function CodePanel({ path, content, live, onEdit }: Props) {
         selection: live ? { anchor: content.length } : undefined,
         effects: live ? EditorView.scrollIntoView(content.length, { y: "end" }) : undefined });
     }
-  }, [path, content, live]);
+  }, [path, content, live, readOnly]);
 
   return <div className="code-host" ref={host} />;
 }

@@ -21,7 +21,7 @@ import coderag
 import engineers
 import jev
 import mcp_server
-import multiavatar, modellab, deploy
+import multiavatar, modellab, deploy, reports, source
 from files import WS
 
 app = FastAPI(title="CRANE")
@@ -32,6 +32,8 @@ app.include_router(multiavatar.router)
 app.include_router(jev.router)
 app.include_router(modellab.router)
 app.include_router(deploy.router)
+app.include_router(reports.router)
+app.include_router(source.router)
 app.include_router(engineers.router)
 STATIC = Path(__file__).parent / "static"
 ALLOWED_HOSTS = {"localhost", "127.0.0.1"}   # the terminal socket is a shell: loopback origins only
@@ -724,4 +726,4 @@ if STATIC.exists():
     @app.get("/{full:path}")
     def spa(full: str):
         f = STATIC / full
-        return FileResponse(f if f.is_file() else STATIC / "index.html")
+        return FileResponse(f if f.is_file() else STATIC / "index.html", headers={"Cache-Control": "no-store"})

@@ -9,7 +9,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSocket } from "../hooks/useSocket";
-import { AvatarFace } from "./MasteringPanel";
+import { AvatarFace } from "./AvatarFace";
 import TipsOverlay, { TipButton, TipTopic } from "./TipsOverlay";
 
 type SeatState = "idle" | "thinking" | "speaking";

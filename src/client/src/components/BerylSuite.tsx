@@ -16,6 +16,21 @@ type Health = { state: "untested" | "testing" | "hot" | "down" | "client"; ms?: 
 
 type DStage = { id: string; name: string; detail?: string; status: string; ms?: number; note?: string };
 type DSlot = { slot: number; pid: string; name: string; stages: DStage[]; state: "running" | "live" | "partial"; summary?: string };
+type Feed = { t: number; who: "LEAD" | "SYS"; text: string; errorCode?: string; resolvedBy?: string };
+type Incident = { id: string; node: string; tag: string; start: number; end?: number; error: string; code: string; rounds: number; resolvedBy?: string; feed: Feed[] };
+const DOCS = "https://docs.nvidia.com/ace/latest/workflows/tokkio/";
+const GUIDE: [string, string][] = [["Tokkio overview", DOCS + "index.html"], ["Quickstart (one command)", DOCS + "quickstart.html"], ["Prerequisites + NGC key", DOCS + "prerequisites.html"],
+  ["Architecture overview", DOCS + "architecture.html"], ["Latency budget", DOCS + "latency.html"], ["Deployment guide", DOCS + "deployment.html"], ["GCP deployment (closest to berylize-node)", DOCS + "gcp-deployment.html"],
+  ["Troubleshooting", DOCS + "troubleshooting.html"], ["Digital Human Blueprint (GitHub)", "https://github.com/NVIDIA-AI-Blueprints/digital-human"], ["NVIDIA/ACE (GitHub)", "https://github.com/NVIDIA/ACE"],
+  ["Live Tokkio demo (no signup)", "https://build.nvidia.com/explore/virtual-assistant"]];
+const NODE_GUIDE: Record<string, [string, string]> = { mic: ["Barge-in / VAD", DOCS + "barge-in.html"], asr: ["Riva ASR config", DOCS + "riva-asr.html"], agt: ["Nemotron integration", DOCS + "nemotron.html"],
+  tts: ["Riva TTS config", DOCS + "riva-tts.html"], a2f: ["Audio2Face overview", DOCS + "audio2face.html"], anm: ["AnimGraph", DOCS + "animgraph.html"], ips: ["WebRTC integration", DOCS + "webrtc.html"],
+  ov: ["Streaming video", DOCS + "streaming-video.html"], bus: ["Latency budget", DOCS + "latency.html"] };
+// Estimated VRAM (GB) of self-hosted GPU models, and GPU host capacity. Estimates, not live telemetry.
+const VRAM: Record<string, number> = { "kaggle/crane-agent": 22, "kaggle/crane-chat": 6, "berylize/Qwen/Qwen2.5-Coder-14B-Instruct-AWQ": 10 };
+const GPU_HOST: Record<string, [string, number]> = { kaggle: ["Kaggle 2×T4", 32], berylize: ["berylize-node L4", 24] };
+const byIdN = (id: string) => N.find(n => n.id === id)!;
+const fmt = (ms: number) => { const t = Math.floor(ms / 1000); return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`; };
 const K: Record<Kind, [string, string, string]> = {
   input: ["linear-gradient(135deg,#3b82f6,#93c5fd)", "rgba(59,130,246,.2)", "#93c5fd"],
   llm: ["linear-gradient(135deg,#a8782f,#f6e2a8 50%,#a8782f)", "rgba(238,202,80,.18)", "#f6d775"],
@@ -51,7 +66,7 @@ const N: NodeDef[] = [
     { n: "AnimGraph", d: "pose graph · blend", port: 8015, proto: "WS", acc: "CPU", ms: 33, key: "" },
     { n: "VRM Driver", d: "three.js · in-browser", port: 0, proto: "client", acc: "Client", ms: 16, key: "" }] },
   { id: "ips", tag: "IPS", role: "Instant Presence", kind: "ctrl", stage: 0, cin: "pose graph", cout: "video frames", models: [
-    { n: "Mirror Loop", d: "L0 idle · always live", port: 8020, proto: "WebRTC", acc: "CPU", ms: 80, key: "" },
+    { n: "Mirror Loop", d: "L0 idle · always live", port: 0, proto: "client", acc: "CPU", ms: 80, key: "" },
     { n: "Neural Talking-Head", d: "real-time · GPU", port: 8021, proto: "WebRTC", acc: "GPU", ms: 120, key: "" }] },
   { id: "ov", tag: "OV", role: "Omniverse Stream", kind: "render", stage: 2, cin: "pose graph", cout: "pixel stream", models: [
     { n: "Omniverse Kit", d: "Tokkio · L2 cinematic RTX", port: 8030, proto: "WebRTC", acc: "GPU", ms: 50, key: "" },
@@ -79,7 +94,7 @@ function layout(shape: string): { W: number; H: number; P: Record<string, [numbe
   return { W: 1280, H: 1120, P };
 }
 
-const RED = "#ff1f3d";
+const RED = "#ff1f3d", GREEN = "#00ff7f";
 const GOLD = "#d9b45a", MUTED = "#8a8290", CARD = "#140a20", BORDER = "#2a1e36", FG = "#ece6f2", OK = "#34d399", BAD = "#f87171", WARN = "#fbbf24";
 const inp: React.CSSProperties = { background: "#0c0614", border: `1px solid ${BORDER}`, color: FG, borderRadius: 5, padding: "6px 9px", fontSize: 12, width: "100%", fontFamily: "monospace" };
 const btn = (on = false): React.CSSProperties => ({ background: on ? GOLD : CARD, color: on ? "#1a1024" : FG, border: `1px solid ${on ? GOLD : BORDER}`,
@@ -96,7 +111,7 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
   const [sel, setSel] = useState("agt");
   const [pick, setPick] = useState<Record<string, string>>(saved.pick || {});     // node id -> model name
   const [over, setOver] = useState<Record<string, string>>(saved.over || {});     // "node.field" -> value
-  const [tab, setTab] = useState<"inspector" | "wiring">("inspector");
+  const [tab, setTab] = useState<"inspector" | "wiring" | "code">("inspector");
   const [health, setHealth] = useState<Record<string, Health>>({});
   const [sources, setSources] = useState<Source[]>([]);
   const [online, setOnline] = useState(false);
@@ -112,6 +127,8 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
   const [dplOpen, setDplOpen] = useState(false);
   const autoRan = useRef(false);
   const [connected, setConnected] = useState(true);
+  const [inspOpen, setInspOpen] = useState(true);
+  const [gpuMeter, setGpuMeter] = useState<{ status: string; util?: number; mem_used_mb?: number; mem_total_mb?: number; temp?: number; power_w?: number; cost_usd?: number; uptime_h?: number } | null>(null);
   const [heard, setHeard] = useState("");
   const [reply, setReply] = useState("");
   const recRef = useRef<{ stop: () => void } | null>(null);
@@ -159,6 +176,13 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
   useEffect(() => { if (open && online) { active.forEach(n => { if (!health[n.id]) testNode(n); }); } /* first sweep only */ // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, online]);
 
+  // ---- GPU meter — polls /api/gpu/status every 5s while suite is open
+  useEffect(() => {
+    if (!open) return;
+    const poll = () => fetch("/api/gpu/status").then(r => r.json()).then(d => setGpuMeter({ status: d.instance_status, util: d.gpu_util, mem_used_mb: d.mem_used_mb, mem_total_mb: d.mem_total_mb, temp: d.gpu_temp_c, power_w: d.power_w, cost_usd: d.cost_usd, uptime_h: d.uptime_h })).catch(() => setGpuMeter(g => g ? { ...g } : null));
+    poll(); const t = setInterval(poll, 5000); return () => clearInterval(t);
+  }, [open]);
+
   // ---- one-click deploy (SSE from /api/deploy/stream)
   useEffect(() => { if (open) fetch("/api/deploy/pipelines").then(r => r.json()).then(d => d.pipelines?.length && setDplList(d.pipelines)).catch(() => {}); }, [open]);
   const deploy = useCallback((pid: string) => {
@@ -181,6 +205,102 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
     es.onerror = () => { upd(d => ({ ...d, state: "partial", summary: "Lost the CRANE server connection" })); es.close(); };
   }, [slots.length]);
   useEffect(() => { if (open && online && !autoRan.current) { autoRan.current = true; deploy("nvidia-prebuilt"); } }, [open, online, deploy]);
+
+  // ---- triage: incident timer + agentic lead feed
+  const [incs, setIncs] = useState<Incident[]>(() => { try { return JSON.parse(localStorage.getItem("beryl-incidents") || "[]"); } catch { return []; } });
+  useEffect(() => { try { localStorage.setItem("beryl-incidents", JSON.stringify(incs.slice(-200))); } catch { /* storage off */ } }, [incs]);
+  const openIncs = incs.filter(i => !i.end);
+  const openRef = useRef<string[]>([]); openRef.current = openIncs.map(i => i.node);
+  const [feed, setFeed] = useState<Feed[]>([]);
+  const [nowT, setNowT] = useState(Date.now());
+  const [autoRetry, setAutoRetry] = useState(true);
+  const [triageOpen, setTriageOpen] = useState(true);
+  const lastLead = useRef(0);
+  const testRef = useRef(testNode); testRef.current = testNode;
+  const post = useCallback((who: Feed["who"], text: string, errorCode?: string, resolvedBy?: string) => setFeed(f => [...f.slice(-40), { t: Date.now(), who, text, errorCode, resolvedBy }]), []);
+  const addLine = useCallback((nodes: string[], who: Feed["who"], text: string, errorCode?: string, resolvedBy?: string) =>
+    setIncs(a => a.map(i => !i.end && nodes.includes(i.node) ? { ...i, feed: [...i.feed.slice(-60), { t: Date.now(), who, text, errorCode, resolvedBy }] } : i)), []);
+  const extractCode = (note?: string): string => {
+    if (!note) return "UNKNOWN";
+    if (/not set/i.test(note)) return "NO_API_KEY";
+    if (/401/.test(note)) return "HTTP_401_UNAUTHORIZED";
+    if (/403/.test(note)) return "HTTP_403_FORBIDDEN";
+    if (/404/.test(note)) return "HTTP_404_NOT_FOUND";
+    if (/503/.test(note)) return "HTTP_503_UNAVAILABLE";
+    if (/timeout/i.test(note)) return "TIMEOUT";
+    if (/unreachable|connection refused|refused/i.test(note)) return "CONNECTION_REFUSED";
+    if (/reset by peer/i.test(note)) return "CONNECTION_RESET";
+    if (/dns|resolve/i.test(note)) return "DNS_FAILURE";
+    if (/ssl|tls|certificate/i.test(note)) return "TLS_ERROR";
+    if (/no.*listen|nothing.*listen/i.test(note)) return "PORT_NOT_LISTENING";
+    return "SERVICE_ERROR";
+  };
+  const downIds = active.filter(n => health[n.id]?.state === "down").map(n => n.id);
+  const downKey = downIds.join(",");
+  const slowIds = active.filter(n => { const h = health[n.id]; return h?.state === "hot" && !!h.ms && h.ms > Number(ov(n, "budget", modelOf(n).ms * 2 || 50)); }).map(n => n.id);
+  const slowKey = slowIds.join(",");
+  const prevSlow = useRef<string[]>([]);
+  useEffect(() => {
+    const added = slowIds.filter(i => !prevSlow.current.includes(i)); prevSlow.current = slowIds;
+    added.forEach(i => { const n = byIdN(i), m = modelOf(n), ms = health[i].ms!, b = Number(ov(n, "budget", m.ms * 2 || 50));
+      post("LEAD", `${n.tag} ${m.n} is SLOW: ${ms}ms against a ${b}ms budget. ${m.acc === "Cloud" || m.url ? "Shared cloud capacity is the limit here; move this node to the Kaggle GPU for guaranteed power." : m.acc === "CPU" ? "It is running on CPU; move it to a GPU host." : "Check GPU load on its host, or raise the budget if this is a cold start."}`); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slowKey]);
+  const gpuUse = Object.entries(active.reduce<Record<string, { gb: number; names: string[] }>>((a, n) => { const m = modelOf(n); if (!m.lab) return a;
+    const k = `${m.lab.pipeline}/${m.lab.model}`, gb = VRAM[k]; if (!gb) return a; const host = m.lab.pipeline; (a[host] ||= { gb: 0, names: [] }).gb += gb; a[host].names.push(m.n); return a; }, {}));
+  const diagnose = (n: NodeDef): string => {
+    const m = modelOf(n), note = health[n.id]?.note || "";
+    if (/not set/i.test(note)) return `${n.tag} ${m.n}: API key missing. Run scripts/setup_enterprise_keys.sh.`;
+    if (/401|403|auth/i.test(note)) return `${n.tag} ${m.n}: key rejected by the provider. Re-enter it with scripts/setup_enterprise_keys.sh.`;
+    if (m.lab?.pipeline === "kaggle") return `${n.tag} ${m.n}: Kaggle tunnel is offline (the URL changes each notebook session). Restart the notebook, then run: bash scripts/kaggle_ops.sh sync.`;
+    if (m.lab?.pipeline === "local") return `${n.tag} ${m.n}: Ollama is not answering. Run: ollama serve.`;
+    if (m.lab?.pipeline === "llamacpp") return `${n.tag} ${m.n}: no llama-server on :8080. Start one: llama-server -m model.gguf --port 8080.`;
+    if (m.port && !m.url && !m.lab) return `${n.tag} ${m.n}: nothing is listening on port ${m.port}. Start that service, or swap this node to a client-side model.`;
+    return `${n.tag} ${m.n}: unreachable${note ? ` (${note})` : ""}. Press Test to retry.`;
+  };
+  const askLead = (ids: string[]) => {
+    const list = ids.map(i => { const n = byIdN(i), m = modelOf(n); return `${n.tag} (${m.n}, port ${m.port || "none"}${health[i]?.note ? `, error: ${health[i].note}` : ""})`; }).join("; ");
+    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/avatar-chat`); let buf = "";
+    const kill = setTimeout(() => ws.close(), 90000);
+    ws.onopen = () => ws.send(JSON.stringify({ message: `You are the triage lead for a live avatar pipeline. These nodes are DOWN: ${list}. In at most two short sentences give the most likely single root cause and the one next action. No greeting, no markdown.` }));
+    ws.onmessage = m => { const d = JSON.parse(m.data); if (d.type === "token") buf += d.delta; else if (d.type === "done" || d.type === "error") { clearTimeout(kill); if (d.type === "done" && buf.trim()) addLine(ids, "LEAD", buf.trim()); ws.close(); } };
+  };
+  const stateKey = openIncs.map(i => health[i.node]?.state).join(",");
+  useEffect(() => {
+    if (!open || !connected) return;
+    const openNow = incs.filter(i => !i.end).map(i => i.node);
+    const created = downIds.filter(i => !openNow.includes(i));
+    if (created.length) {
+      const t = Date.now();
+      const fresh: Incident[] = created.map(i => { const n = byIdN(i), note = health[i]?.note || "", code = extractCode(note);
+        return { id: `${i}-${t}`, node: i, tag: n.tag, start: t, error: note, code, rounds: 0,
+          feed: [{ t, who: "SYS", text: `${n.tag} went red.`, errorCode: code }, { t, who: "LEAD", text: diagnose(n) }] }; });
+      setIncs(a => [...a, ...fresh.filter(f => !a.some(x => !x.end && x.node === f.node))]);
+      if (Date.now() - lastLead.current > 30000) { lastLead.current = Date.now(); askLead(created); }
+    }
+    const healed = incs.filter(i => !i.end && !downIds.includes(i.node) && ["hot", "client"].includes(health[i.node]?.state ?? ""));
+    if (healed.length) {
+      const t = Date.now();
+      const closed = healed.map(i => { const by = i.rounds > 0 ? "auto-retest" : "manual-test";
+        return { ...i, end: t, resolvedBy: by, feed: [...i.feed, { t, who: "SYS" as const, text: `${i.tag} recovered after ${fmt(t - i.start)}.`, resolvedBy: by }] }; });
+      setIncs(a => a.map(i => closed.find(c => c.id === i.id) || i));
+      closed.forEach(c => fetch("/api/reports/triage", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pipeline: dpl, opened_at_iso: new Date(c.start).toISOString(), cleared_at_iso: new Date(c.end!).toISOString(), duration_ms: c.end! - c.start,
+          nodes: [{ id: c.node, tag: c.tag, error: c.error, error_code: c.code, resolved_at_iso: new Date(c.end!).toISOString(), resolved_by: c.resolvedBy }],
+          feed_summary: c.feed.map(f => `${f.who}: ${f.text}`), gpu_host: "berylize-node (GCP L4)" }) }).catch(() => {}));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [downKey, stateKey, open, connected]);
+  useEffect(() => { if (!openIncs.length) return; const t = setInterval(() => setNowT(Date.now()), 1000); return () => clearInterval(t); }, [openIncs.length]);
+  useEffect(() => {
+    if (!openIncs.length || !autoRetry || !connected) return;
+    const t = setInterval(async () => {
+      const ids = [...openRef.current];
+      setIncs(a => a.map(i => !i.end ? { ...i, rounds: i.rounds + 1 } : i));
+      for (const id of ids) { const r = await testRef.current(byIdN(id)); addLine([id], "SYS", `Auto-retest: ${/reachable in|TTFT|browser/.test(r) ? "passed" : "still down"}.`); }
+    }, 20000);
+    return () => clearInterval(t);
+  }, [openIncs.length, autoRetry, connected, addLine]);
 
   // ---- layout + animation
   useEffect(() => {
@@ -227,6 +347,111 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
       swapRule: "Replace a node model freely as long as contract.in/out match; only endpoint, port, apiKeyEnv change." };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, pick, over, stage, extra, sources]);
+  // ---- pipeline code generator — real connection code per cluster, no LLM
+  const pipelineCode = useMemo(() => {
+    const nodes = spec.nodes;
+    const edges = spec.edges;
+
+    // group nodes by stage/cluster for section headers
+    const clusters: Record<string, typeof nodes> = {};
+    nodes.forEach(n => {
+      const nd = N.find(x => x.id === n.id)!;
+      const cl = nd.stage === 0 ? "L0 · Always-Hot (control plane)" : nd.stage === 2 ? "L2 · Omniverse (GPU render)" : "L1 · On-Demand (signal path)";
+      (clusters[cl] ||= []).push(n);
+    });
+
+    const nodeCode = (n: typeof nodes[0]): string => {
+      const h = health[n.id];
+      const status = h ? (h.state === "hot" ? `# ✓ HOT ${h.ms ? h.ms + "ms" : ""}` : h.state === "down" ? `# ✗ DOWN — ${h.note || "untested"}` : h.state === "client" ? "# CLIENT-SIDE" : "# untested") : "# untested";
+      const keyLine = n.apiKeyEnv ? `\n    api_key = os.environ["${n.apiKeyEnv}"]` : "";
+      const endpointLine = n.endpoint ? `\n    endpoint = "${n.endpoint}"` : "";
+      const portLine = n.port ? `\n    port = ${n.port}` : "";
+
+      if (n.protocol === "client" || n.warm === "always" && !n.port) {
+        return `# ── ${n.id.toUpperCase()} · ${n.role} ${status}\n# Runs in the browser (WebRTC / WebAudio). No server connection needed.\n# contract: ${n.contract.in} → ${n.contract.out}\n`;
+      }
+      if (n.protocol === "gRPC" || (n.endpoint || "").includes("grpc")) {
+        return `# ── ${n.id.toUpperCase()} · ${n.role} ${status}
+# contract: ${n.contract.in} → ${n.contract.out}
+async def ${n.id}_call(data: bytes) -> bytes:${keyLine}${endpointLine}${portLine}
+    creds = grpc.ssl_channel_credentials()
+    meta = [("authorization", f"Bearer {api_key}")]
+    async with grpc.aio.secure_channel(f"{'{'}endpoint{'}'}:{'{'}port{'}'}", creds) as ch:
+        # stub = ${n.id.toUpperCase()}Stub(ch)   # import from NVIDIA ACE proto
+        result = await stub.Process(Request(payload=data), metadata=meta)
+    return result.payload
+`;
+      }
+      if (n.protocol === "OpenAI-compat" || (n.modelLab)) {
+        const model = n.modelLab?.model || n.model;
+        return `# ── ${n.id.toUpperCase()} · ${n.role} ${status}
+# contract: ${n.contract.in} → ${n.contract.out}
+async def ${n.id}_call(messages: list[dict]) -> str:${keyLine}${endpointLine}${portLine}
+    async with httpx.AsyncClient(timeout=30) as c:
+        r = await c.post(
+            f"https://{'{'}endpoint{'}'}/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": "${model}", "messages": messages, "max_tokens": 512, "stream": False},
+        )
+        r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"]
+`;
+      }
+      if (n.protocol === "WebRTC" || n.protocol === "WS") {
+        return `# ── ${n.id.toUpperCase()} · ${n.role} ${status}
+# contract: ${n.contract.in} → ${n.contract.out}
+async def ${n.id}_connect() -> None:${endpointLine}${portLine}
+    uri = f"ws://{'{'}endpoint or 'localhost'{'}'}:{'{'}port{'}'}"
+    async with websockets.connect(uri) as ws:
+        await ws.send(json.dumps({"init": True}))
+        msg = json.loads(await ws.recv())
+    return msg
+`;
+      }
+      return `# ── ${n.id.toUpperCase()} · ${n.role} ${status}\n# protocol: ${n.protocol} | endpoint: ${n.endpoint}:${n.port}\n`;
+    };
+
+    const edgeLines = edges.map(e => `    # ${e.from.toUpperCase()} ──[${e.channel}]──▶ ${e.to.toUpperCase()}`).join("\n");
+
+    const sections = Object.entries(clusters).map(([cl, ns]) =>
+      `# ${"═".repeat(60)}\n# CLUSTER: ${cl}\n# ${"═".repeat(60)}\n\n` + ns.map(nodeCode).join("\n")
+    ).join("\n");
+
+    return `"""
+CRANE Beryl Pipeline — auto-generated connection code
+Pipeline : ${spec.project}
+Stage    : ${spec.stage}
+Generated: ${new Date().toISOString()}
+
+Install: pip install httpx grpcio grpcio-tools websockets
+Keys   : source ~/.hermes/.env
+"""
+import asyncio, json, os
+import grpc, grpc.aio
+import httpx
+import websockets
+
+# ── Data-flow edges ──────────────────────────────────────────────────────────
+# Signal flows through nodes in this order:
+${edgeLines}
+
+# ── Node implementations ─────────────────────────────────────────────────────
+${sections}
+# ── Pipeline runner ──────────────────────────────────────────────────────────
+async def run_pipeline(audio_pcm: bytes) -> None:
+${nodes.filter(n => n.protocol !== "client").map((n, i, arr) => {
+  const prev = arr[i - 1];
+  const fromVar = prev ? `${prev.id}_out` : "audio_pcm";
+  return `    ${n.id}_out = await ${n.id}_call(${fromVar})`;
+}).join("\n")}
+
+if __name__ == "__main__":
+    asyncio.run(run_pipeline(b""))  # replace b"" with real PCM audio bytes
+`;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spec, health]);
+
+  useEffect(() => { try { localStorage.setItem("beryl-pipeline-code", pipelineCode); } catch { /* storage off */ } }, [pipelineCode]);
   const copy = (txt: string, msg: string) => { try { navigator.clipboard.writeText(txt); } catch { /* clipboard blocked */ } setToast(msg); };
   const download = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(spec, null, 2)], { type: "application/json" })); a.download = "beryl.pipeline.json"; a.click(); };
   const say = (t: string) => { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.onstart = () => setTalking(true); u.onend = () => setTalking(false); speechSynthesis.speak(u); } catch { /* no speech synthesis */ } };
@@ -257,6 +482,7 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
   const fitK = Math.max(0.15, Math.min(1.1, Math.min((wrap.w - 4) / LP.W, (wrap.h - 4) / LP.H))), sc = fitK * zoom;
   const byId = Object.fromEntries(N.map(n => [n.id, n]));
   const stat = (n: NodeDef): [string, string] => { if (n.stage > stage) return ["COLD", "#6b6478"]; const h = health[n.id]?.state;
+    if (h === "hot" && slowIds.includes(n.id)) return ["SLOW", WARN];
     return h === "hot" ? ["HOT", OK] : h === "client" ? ["CLIENT", "#93c5fd"] : h === "down" ? ["DOWN", BAD] : h === "testing" ? ["TESTING", WARN] : ["UNTESTED", WARN]; };
   const hotCount = active.filter(n => ["hot", "client"].includes(health[n.id]?.state || "")).length;
   const sn = byId[sel], sm = modelOf(sn), sk = K[sn.kind];
@@ -275,7 +501,31 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
         </select>
         <button style={{ ...btn(true), background: "#76b900", borderColor: "#76b900", color: "#0b1200", padding: "8px 20px", fontSize: 13 }} onClick={() => deploy(dpl)}>▶ DEPLOY</button>
         <button style={btn(dplOpen)} onClick={() => setDplOpen(o => !o)}>SESSIONS {slots.length}</button>
+        <select aria-label="NVIDIA guide" value="" style={{ ...btn(), borderColor: "#76b900", color: "#b6e35b", width: 130 }} onChange={e => { if (e.target.value) window.open(e.target.value, "_blank", "noopener,noreferrer"); }}>
+          <option value="">NVIDIA GUIDE ↗</option>{GUIDE.map(g => <option key={g[1]} value={g[1]}>{g[0]}</option>)}</select>
         <span style={{ fontSize: 11, fontFamily: "monospace", color: online ? OK : BAD }}>● Backend {online ? "online" : "offline"} · localhost</span>
+        {gpuMeter && (() => {
+          const running = gpuMeter.status === "running";
+          const uptimeSec = gpuMeter.uptime_h ? Math.round(gpuMeter.uptime_h * 3600) : 0;
+          const hh = String(Math.floor(uptimeSec / 3600)).padStart(2, "0");
+          const mm = String(Math.floor((uptimeSec % 3600) / 60)).padStart(2, "0");
+          const ss = String(uptimeSec % 60).padStart(2, "0");
+          return (
+            <span title={`Vendor: GCP berylize-node | GPU: NVIDIA L4 24GB | Temp: ${gpuMeter.temp ?? "–"}°C | Power: ${gpuMeter.power_w?.toFixed(0) ?? "–"}W | Cost: $${gpuMeter.cost_usd?.toFixed(4) ?? "–"}`}
+              style={{ fontSize: 11, fontFamily: "monospace", display: "flex", alignItems: "center", gap: 5, background: "#0f1a04", border: `1px solid ${running ? "#4a7a00" : "#5a3a00"}`, borderRadius: 6, padding: "3px 8px", cursor: "default" }}>
+              <span style={{ color: running ? "#76b900" : "#ff8c00" }}>▣</span>
+              <span style={{ color: running ? "#76b900" : "#ff8c00", fontWeight: 800 }}>GCP·L4</span>
+              {running ? (
+                <>
+                  <span style={{ color: "#b6e35b" }}>{gpuMeter.util?.toFixed(0) ?? "0"}%</span>
+                  <span style={{ color: "#8cc444" }}>{gpuMeter.mem_used_mb ? `${(gpuMeter.mem_used_mb / 1024).toFixed(1)}/${(gpuMeter.mem_total_mb! / 1024).toFixed(0)}GB` : "–"}</span>
+                  <span style={{ color: "#5a8a20", borderLeft: "1px solid #2a4a10", paddingLeft: 5 }}>{hh}:{mm}:{ss}</span>
+                  {gpuMeter.cost_usd != null && <span style={{ color: "#3a6a10" }}>${gpuMeter.cost_usd.toFixed(3)}</span>}
+                </>
+              ) : <span style={{ color: "#ff8c00" }}>{gpuMeter.status?.toUpperCase()}</span>}
+            </span>
+          );
+        })()}
         <button style={btn(true)} onClick={connected ? disconnect : connect}>{connected ? "Disconnect" : "Connect"}</button>
         <button style={btn()} onClick={onClose} aria-label="Close">✕</button>
       </header>
@@ -330,8 +580,8 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
                   const d = horiz ? `M${ax} ${ay} C${ax + dx / 2} ${ay},${ax + dx / 2} ${by},${bx} ${by}` : `M${ax} ${ay} C${ax} ${ay + dy / 2},${bx} ${ay + dy / 2},${bx} ${by}`;
                   const live = ["hot", "client"].includes(health[e[0]]?.state || "") && ["hot", "client"].includes(health[e[1]]?.state || "");
                   const bad = byId[e[0]].stage <= stage && byId[e[1]].stage <= stage && (health[e[0]]?.state === "down" || health[e[1]]?.state === "down");
-                  return <g key={i}><path d={d} fill="none" stroke={bad ? RED : live ? "#10b981" : "#3a2e46"} strokeWidth={bad ? 3 : 2} strokeDasharray={bad ? "none" : live ? "6 6" : "3 6"} style={bad ? { filter: `drop-shadow(0 0 4px ${RED})` } : undefined} />
-                    <text x={(ax + bx) / 2} y={(ay + by) / 2 - 8} fill={bad ? RED : "#9a90a8"} fontSize={14} textAnchor="middle" fontFamily="monospace">{`${e[2] || "clock"}${modelOf(byId[e[1]]).ms ? ` · ${health[e[1]]?.ms ?? modelOf(byId[e[1]]).ms}ms` : ""}`}</text></g>;
+                  return <g key={i}><path d={d} fill="none" stroke={bad ? RED : GREEN} strokeWidth={bad ? 3.5 : 2.5} style={{ filter: `drop-shadow(0 0 ${bad ? 5 : 3}px ${bad ? RED : GREEN})` }} />
+                    <text x={(ax + bx) / 2} y={(ay + by) / 2 - 8} fill={bad ? RED : "#8dffc0"} fontSize={14} textAnchor="middle" fontFamily="monospace">{`${e[2] || "clock"}${modelOf(byId[e[1]]).ms ? ` · ${health[e[1]]?.ms ?? modelOf(byId[e[1]]).ms}ms` : ""}`}</text></g>;
                 })}
               </svg>
               {N.map(n => { const [x, y] = LP.P[n.id]; const m = modelOf(n), k = K[n.kind], st = stat(n), on = n.stage <= stage, picked = sel === n.id, down = on && health[n.id]?.state === "down";
@@ -356,22 +606,24 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
           </div>
 
           {/* inspector */}
-          <div style={{ borderTop: `1px solid ${BORDER}`, background: "#0c0813", padding: "10px 14px", maxHeight: 290, overflowY: "auto" }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
-              <button style={btn(tab === "inspector")} onClick={() => setTab("inspector")}>NODE INSPECTOR</button>
-              <button style={btn(tab === "wiring")} onClick={() => setTab("wiring")}>WIRING SPEC</button>
+          <div style={{ borderTop: `1px solid ${BORDER}`, background: "#0c0813" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 14px", flexWrap: "wrap" }}>
+              <button style={btn(tab === "inspector")} onClick={() => { setTab("inspector"); setInspOpen(true); }}>NODE INSPECTOR</button>
+              <button style={btn(tab === "wiring")} onClick={() => { setTab("wiring"); setInspOpen(true); }}>WIRING SPEC</button>
               <select aria-label="Quick actions" value="" style={{ ...btn(), width: 36, padding: "6px 4px" }} onChange={e => { const v = e.target.value;
                 if (v === "beryl" || v === "tokkio") applyPreset(v); else if (v === "reset") { setPick({}); setOver({}); setHealth({}); setToast("Reset to defaults."); } else if (v === "all") testAll(); }}>
                 <option value="">▾</option><option value="beryl">Load BERYL preset</option><option value="tokkio">Load TOKKIO baseline</option><option value="all">Test all nodes</option><option value="reset">Reset to defaults</option></select>
               <div style={{ flex: 1 }} />
               <button style={btn()} onClick={() => copy(JSON.stringify(spec, null, 2), "Wiring spec copied to clipboard.")}>⧉ Copy spec</button>
               <button style={btn()} onClick={download}>↓ .json</button>
+              <button style={{ ...btn(), padding: "6px 10px", fontSize: 13, lineHeight: 1 }} title={inspOpen ? "Collapse panel" : "Expand panel"} onClick={() => setInspOpen(o => !o)}>{inspOpen ? "▾" : "▴"}</button>
             </div>
-            {tab === "wiring" ? <pre style={{ margin: 0, fontSize: 11, color: "#c9c0d6", whiteSpace: "pre-wrap" }}>{JSON.stringify(spec, null, 2)}</pre> : (
-              <div style={{ display: "grid", gap: 8 }}>
+            {inspOpen && (tab === "wiring" ? <pre style={{ margin: 0, padding: "0 14px 12px", fontSize: 11, color: "#c9c0d6", whiteSpace: "pre-wrap", maxHeight: 260, overflowY: "auto" }}>{JSON.stringify(spec, null, 2)}</pre> : (
+              <div style={{ display: "grid", gap: 8, padding: "0 14px 12px", maxHeight: 260, overflowY: "auto" }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
                   <span style={{ fontSize: 11, fontFamily: "monospace", background: sk[1], color: sk[2], padding: "1px 7px", borderRadius: 4 }}>{sn.tag}</span>
-                  <b style={{ fontSize: 17 }}>{sn.role}</b><span style={lbl}>IN {sn.cin} → OUT {sn.cout}</span></div>
+                  <b style={{ fontSize: 17 }}>{sn.role}</b><span style={lbl}>IN {sn.cin} → OUT {sn.cout}</span>
+                  <a href={NODE_GUIDE[sn.id][1]} target="_blank" rel="noopener noreferrer" style={{ ...lbl, color: "#b6e35b", marginLeft: "auto" }}>NVIDIA GUIDE: {NODE_GUIDE[sn.id][0]} ↗</a></div>
                 <div style={lbl}>MODEL — ONE CLICK SWAP{sn.id === "agt" ? " (any Model Lab source works here)" : ""}</div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {modelsOf(sn).map(m => <button key={m.n} onClick={() => swap(sn, m.n)} style={{ ...btn(sm.n === m.n), textAlign: "left", padding: "7px 12px" }}>
@@ -390,12 +642,64 @@ export default function BerylSuite({ open, onClose }: { open: boolean; onClose: 
                   {([["ENDPOINT", "endpoint", endpointOf(sn)], ["PORT", "port", sm.port], ["API KEY ENV VAR (name only)", "key", sm.key], ["LATENCY BUDGET (MS)", "budget", sm.ms * 2 || 50]] as [string, string, string | number][]).map(([l, f, d]) =>
                     <label key={f} style={{ display: "grid", gap: 3 }}><span style={lbl}>{l}</span><input style={inp} value={ov(sn, f, d)} onChange={setF(f)} /></label>)}
                 </div>
-              </div>)}
+              </div>))}
           </div>
         </div>
 
         {/* ── right: live studio */}
         <aside style={{ borderLeft: `1px solid ${BORDER}`, background: "#0c0813", padding: 14, overflowY: "auto", display: "grid", gap: 10, alignContent: "start" }}>
+            <div style={{ background: "rgba(12,8,19,.94)", borderRadius: 10, fontFamily: "monospace",
+              border: `1px solid ${openIncs.length ? RED : incs.length ? GREEN : BORDER}`, boxShadow: openIncs.length ? `0 0 18px ${RED}66` : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", cursor: "pointer" }} onClick={() => setTriageOpen(o => !o)}>
+                <span style={{ ...lbl, color: FG }}>TRIAGE</span>
+                <b style={{ fontSize: 15, color: openIncs.length ? RED : incs.length ? GREEN : MUTED }}>{openIncs.length ? `● ${openIncs.length} RED` : !connected ? "OFFLINE" : "ALL CLEAR"}</b>
+                <span style={{ fontSize: 10, color: MUTED }}>{incs.length} logged · {incs.filter(i => i.end).length} resolved</span>
+                <span style={{ flex: 1 }} /><span style={{ color: MUTED }}>{triageOpen ? "▾" : "▸"}</span>
+              </div>
+              {triageOpen && <div style={{ borderTop: `1px solid ${BORDER}`, padding: "6px 10px 8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                  <span style={lbl}>AGENTIC LEAD</span><span style={{ flex: 1 }} />
+                  <label style={{ ...lbl, display: "flex", gap: 4, alignItems: "center", cursor: "pointer" }}><input type="checkbox" checked={autoRetry} onChange={e => setAutoRetry(e.target.checked)} />AUTO-RETEST 20s</label>
+                </div>
+                <div style={{ marginBottom: 6, display: "grid", gap: 2 }}>
+                  <span style={lbl}>GPU HEADROOM (estimate)</span>
+                  {gpuUse.length === 0 && <span style={{ fontSize: 11, color: MUTED }}>No self-hosted GPU model in this pipeline. NVIDIA NIM nodes run on NVIDIA's cloud GPUs.</span>}
+                  {gpuUse.map(([h, u]) => { const [nm, cap] = GPU_HOST[h] || [h, 0], pct = cap ? u.gb / cap : 0, off = sources.find(x => x.name === h)?.online === false;
+                    const c = off || pct > 0.95 ? RED : pct > 0.8 ? WARN : GREEN;
+                    return <div key={h} style={{ fontSize: 11, color: c }}>{nm}: ~{u.gb}/{cap} GB ({Math.round(pct * 100)}%){pct > 0.95 ? " NOT ENOUGH" : pct > 0.8 ? " TIGHT" : " ok"}{off ? " · host OFFLINE, cannot confirm" : ""}
+                      <span style={{ color: MUTED }}> {u.names.join(", ")}</span></div>; })}
+                  {slowIds.map(i => <div key={i} style={{ fontSize: 11, color: WARN }}>SLOW {byIdN(i).tag}: {health[i].ms}ms &gt; {ov(byIdN(i), "budget", modelOf(byIdN(i)).ms * 2 || 50)}ms budget</div>)}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                  <span style={lbl}>INCIDENTS — one clock per red node, nothing is cleared</span>
+                  <a href="/api/reports/triage/export" download="triage_reports.json" style={{ ...lbl, color: "#76b900", marginLeft: "auto" }}>↓ EXPORT</a>
+                </div>
+                {incs.length === 0 && <span style={{ fontSize: 11, color: MUTED }}>Watching the pipeline. Each node that goes red gets its own clock and log here.</span>}
+                <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollSnapType: "x mandatory", paddingBottom: 6 }}>
+                  {[...incs].sort((x, y) => (x.end ? 1 : 0) - (y.end ? 1 : 0) || x.start - y.start).map(i => {
+                    const n = Math.min(incs.length, 3), done = !!i.end, c = done ? GREEN : RED;
+                    return (
+                      <div key={i.id} style={{ flex: `0 0 calc(${100 / n}% - ${(8 * (n - 1)) / n}px)`, minWidth: 150, scrollSnapAlign: "start", border: `1px solid ${c}66`, borderRadius: 8, padding: "6px 8px", background: done ? "#0a1a0e" : "#1a070c", display: "grid", gap: 4, alignContent: "start" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><b style={{ color: c }}>{i.tag}</b><span style={{ ...lbl, color: c }}>{done ? "RESOLVED" : "RED"}</span></div>
+                        <b style={{ fontSize: 22, color: c, letterSpacing: ".05em" }}>{fmt((i.end ?? nowT) - i.start)}</b>
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 9, background: "#2a0a10", color: RED, border: `1px solid ${RED}55`, borderRadius: 3, padding: "0 4px" }}>{i.code}</span>
+                          {i.resolvedBy && <span style={{ fontSize: 9, background: "#0a1a04", color: GREEN, border: `1px solid ${GREEN}55`, borderRadius: 3, padding: "0 4px" }}>✓ {i.resolvedBy}</span>}
+                        </div>
+                        <div style={{ maxHeight: 170, overflowY: "auto", display: "grid", gap: 3 }}>
+                          {[...i.feed].reverse().map((f, k) => (
+                            <div key={k} style={{ fontSize: 10.5, lineHeight: 1.35, color: f.who === "LEAD" ? "#ede0b8" : "#c9c0d6" }}>
+                              <span style={{ color: MUTED }}>{new Date(f.t).toLocaleTimeString([], { hour12: false })} </span><b style={{ color: f.who === "LEAD" ? "#f6d775" : "#9a90a8" }}>{f.who}</b> {f.text}
+                            </div>))}
+                        </div>
+                      </div>);
+                  })}
+                </div>
+                {feed.length > 0 && <div style={{ display: "grid", gap: 2, marginTop: 4 }}><span style={lbl}>PIPELINE NOTES</span>
+                  {[...feed].reverse().slice(0, 4).map((f, k) => <div key={k} style={{ fontSize: 10.5, color: "#c9c0d6" }}><span style={{ color: MUTED }}>{new Date(f.t).toLocaleTimeString([], { hour12: false })} </span>{f.text}</div>)}</div>}
+              </div>}
+            </div>
+
           <div style={{ display: "flex", alignItems: "center" }}><div><b style={{ letterSpacing: ".1em" }}>BERYL LIVE STUDIO</b><div style={lbl}>Instant Presence · mirror · {ST[stage][0]}</div></div><div style={{ flex: 1 }} />
             <span style={{ fontSize: 11, fontFamily: "monospace", border: `1px solid ${BORDER}`, borderRadius: 999, padding: "3px 10px", color: online ? OK : BAD }}>● Backend {online ? "online" : "offline"}</span></div>
           <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", border: `1px solid ${BORDER}`, aspectRatio: "1 / 1", background: "#000" }}>
