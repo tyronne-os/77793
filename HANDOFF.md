@@ -4,6 +4,34 @@
 
 ---
 
+## BUILD TWO — backend rapid build (2026-10-07, planned, not started)
+
+Scope: backend only. The front end (Studio, Suite, landing) is final; do not touch it. Extend `src/server/{jev,deploy,chat,multiavatar,gpu}.py`, do not rewrite. Existing GPU: `berylize-node` (project posh-eden, us-east1-c, L4). Do NOT push to any repo until the user names the target.
+
+### Rules
+- Every node gets a smoke test before anything else. Count errors per node; on the 3rd distinct failure STOP patching and vendor a known-good reference (Hugging Face / NVIDIA GitHub): Pipecat + nvidia voice-agent-examples, JoyVASA, FLOAT, LivePortrait (check InsightFace license), Kokoro, faster-whisper.
+- The user will supply an upgraded node spec; fold it into the node YAML before step 2.
+
+### Build order
+1. Audit: run server and tests, list live endpoints, mark real vs SIM (blendshapes are SIM today).
+2. Own YAML contract (no third-party skill): `node.yaml` per node + `pipelines.yaml`, loaded once with `yaml.safe_load` (pyyaml already in requirements), schema-checked at boot and in CI. About 15 flat fields per node: slot, model, fallbacks[], device, port, key_env NAME (never the value), probe, latency_budget_ms, max_failures, repair policy. No expressions or loops in YAML; branching lives in Python.
+3. Hard-coded repair ladder (about 200 lines, no LLM in the hot path): retry once with jitter -> restart node -> swap to next declared fallback (pre-resolved at load, kept warm) -> degrade stage L2->L1->L0 -> escalate. Auto-generated repair report (JSON + short markdown, to `runs/` and the sensory gland): failing node, probe evidence, each ladder step with timestamps, outcome, stage after. 3rd failure of a node sets `needs_research`.
+4. CPU chain real: ASR (faster-whisper/Parakeet INT8) -> LLM (chat.py) -> TTS (Kokoro INT8) over `/ws/avatar-chat`.
+5. JEV x5 in `jev.py`: face, voice, persona, director, verify, each with a deterministic fallback (JEV is early access; a repair never depends on JEV).
+6. Motion node (audio -> latents, JoyVASA/FLOAT class) replaces SIM blendshapes.
+7. Photo-in: upload -> render (L1 warp on CPU; L2 FlashHead/LeapTalk on GPU) -> existing Studio.
+8. VERIFY real measurements: lip-sync offset, FPS, first-frame latency, painted-pixel motion.
+9. `gpu_on` on berylize-node, bake-off, scorecard.
+
+### Cost reference (1 session-hour; unit prices are assumptions except JEV $0.042/M in)
+V1 budget ~$0.26-0.38 | V2 balanced ~$0.57 (test first) | V3 max ~$2.38 | V4 small-model CPU ~$0.36 | Tokkio-class ref ~$1.46. JEV is about $0.06-0.23/hr, negligible next to GPU and any MLLM judge.
+
+### Environment variable names (values go in the Claude environment settings, never in the repo or chat)
+`NVIDIA_API_KEY` (build.nvidia.com, nvapi-...), `NGC_API_KEY` (NGC container pulls), `NGC_ENTERPRISE_KEY` (name the existing deploy.py reads), `HF_TOKEN`, `TYPESAFE_API_KEY` (jev.py also accepts `JEV_API_KEY`), `GCP_SA_KEY_JSON`, `GCP_PROJECT_ID`, `GCP_ZONE`.
+Allowed network domains: docs.nvidia.com, build.nvidia.com, api.ngc.nvidia.com, huggingface.co, googleapis.com.
+
+---
+
 ## SESSION UPDATE 2026-10-03 (Beryl Mastering Suite, Deploy, Model Lab, NVIDIA keys)
 
 ### What was built this session
