@@ -1,7 +1,7 @@
 <title>Crane Builder</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap">
 <style>
-/* ── single dark-first design — IDE surface, no theme toggling ── */
+/* ── single dark-first design — IDE surface ── */
 :root {
   --bg:         #09090b;
   --surface:    #111113;
@@ -20,179 +20,71 @@
   --gold-chrome:linear-gradient(115deg,#5a3d05 0%,#c6a23a 18%,#fff6cf 30%,#eeca50 42%,#8a6410 56%,#f5d775 70%,#b88a22 88%,#5a3d05 100%);
   --green:      #34d399;
   --red:        #dc2626;
-  --radius-sm:  8px;
-  --radius-md:  10px;
-  --radius-lg:  14px;
-  --radius-xl:  18px;
-  --font-sans:  'Geist', system-ui, sans-serif;
-  --font-mono:  'Geist Mono', ui-monospace, monospace;
-  --font-serif: 'Instrument Serif', Georgia, serif;
   color-scheme: dark;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: var(--bg); color: var(--fg); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
+html, body { height: 100%; background: var(--bg); color: var(--fg); font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
 a { color: var(--gold); text-decoration: none; }
-a:hover { color: #fff3c2; }
-button { cursor: pointer; font-family: var(--font-sans); }
-textarea { font-family: var(--font-sans); }
+button { cursor: pointer; font-family: 'Geist', sans-serif; }
+textarea { font-family: 'Geist', sans-serif; }
 textarea::placeholder { color: var(--fg-5); }
 
 @keyframes wave    { 0%,100%{transform:scaleY(.25)} 50%{transform:scaleY(1)} }
 @keyframes chrome  { 0%,100%{background-position:0% 0} 50%{background-position:100% 0} }
-@keyframes ring    { 0%{transform:scale(1);opacity:.55} 100%{transform:scale(1.18);opacity:0} }
 @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
+@keyframes rise    { 0%{opacity:0;transform:translateY(16px)} 100%{opacity:1;transform:translateY(0)} }
+@keyframes glint   { 0%,30%{background-position:160% 0} 70%,100%{background-position:-60% 0} }
+@keyframes slide-in { from{transform:translateY(8px);opacity:0} to{transform:translateY(0);opacity:1} }
 
 /* ── layout shell ── */
-.app {
-  height: 100%;
-  display: grid;
-  grid-template-rows: 56px minmax(0,1fr);
-}
+.app { height: 100%; display: grid; grid-template-rows: 56px minmax(0,1fr); }
 
 /* ── header ── */
 .header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 16px;
-  min-width: 0;
-  overflow: hidden;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg);
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; min-width: 0; overflow: hidden;
+  border-bottom: 1px solid var(--border); background: var(--bg);
 }
-
-.logo {
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  text-decoration: none;
-  flex-shrink: 0;
-}
+.logo { display: flex; align-items: flex-end; gap: 4px; text-decoration: none; flex-shrink: 0; }
 .logo-c {
-  font-family: Georgia, serif;
-  font-size: 38px;
-  line-height: .78;
-  font-weight: 700;
-  background: var(--gold-chrome);
-  background-size: 220% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-family: Georgia, serif; font-size: 38px; line-height: .78; font-weight: 700;
+  background: var(--gold-chrome); background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
   animation: chrome 5s ease-in-out infinite;
 }
-.logo-rane {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: .22em;
-  color: var(--fg);
-  padding-bottom: 2px;
-}
-.logo-tag {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: .3em;
-  color: var(--gold);
-  padding-bottom: 3px;
-  margin-left: 4px;
-}
-
-.divider-v { width: 1px; height: 22px; background: var(--border-mid); flex-shrink: 0; }
-
+.logo-rane  { font-size: 13px; font-weight: 700; letter-spacing: .22em; color: var(--fg); padding-bottom: 2px; }
+.logo-tag   { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .3em; color: var(--gold); padding-bottom: 3px; margin-left: 4px; }
+.divider-v  { width: 1px; height: 22px; background: var(--border-mid); flex-shrink: 0; }
 .btn-project {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  border: 1px solid var(--border-mid);
-  color: var(--fg-2);
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
+  display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+  border-radius: 10px; background: var(--surface); border: 1px solid var(--border-mid);
+  color: var(--fg-2); font-size: 13px; font-weight: 500; white-space: nowrap;
 }
 .btn-project:hover { background: var(--surface2); }
-
 .btn-new {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: var(--radius-md);
-  background: transparent;
-  border: 1px solid var(--border-mid);
-  color: var(--fg-3);
-  font-size: 13px;
-  font-weight: 500;
+  display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
+  border-radius: 10px; background: transparent; border: 1px solid var(--border-mid);
+  color: var(--fg-3); font-size: 13px; font-weight: 500;
 }
 .btn-new:hover { background: var(--surface); }
-
 .header-spacer { flex: 1; }
-
-.tab-group {
-  display: flex;
-  padding: 3px;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.tab {
-  height: 28px;
-  padding: 0 14px;
-  border-radius: 7px;
-  border: none;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: .06em;
-  transition: background .15s, color .15s;
-}
-.tab.active {
-  background: var(--gold-grad);
-  color: #1a1204;
-}
-.tab.inactive {
-  background: transparent;
-  color: var(--fg-4);
-}
+.tab-group { display: flex; padding: 3px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); flex-shrink: 0; }
+.tab { height: 28px; padding: 0 14px; border-radius: 7px; border: none; font-size: 12px; font-weight: 600; letter-spacing: .06em; transition: background .15s, color .15s; }
+.tab.active  { background: var(--gold-grad); color: #1a1204; }
+.tab.inactive{ background: transparent; color: var(--fg-4); }
 .tab.inactive:hover { color: var(--fg-2); }
-
 .status-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border-mid);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--fg-3);
-  white-space: nowrap;
-  flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+  border-radius: 999px; border: 1px solid var(--border-mid);
+  font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--fg-3); white-space: nowrap; flex-shrink: 0;
 }
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--green);
-}
-
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse-dot 2s ease-in-out infinite; }
 .btn-ship {
-  height: 32px;
-  padding: 0 14px;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255,236,170,.5);
-  background: var(--gold-grad);
-  color: #1a1204;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: .1em;
-  transition: transform .12s;
-  flex-shrink: 0;
+  height: 32px; padding: 0 14px; border-radius: 10px;
+  border: 1px solid rgba(255,236,170,.5); background: var(--gold-grad);
+  color: #1a1204; font-size: 12px; font-weight: 700; letter-spacing: .1em;
+  transition: transform .12s; flex-shrink: 0;
 }
 .btn-ship:hover  { transform: scale(1.03); }
 .btn-ship:active { transform: scale(.96); }
@@ -205,534 +97,246 @@ textarea::placeholder { color: var(--fg-5); }
 }
 
 /* ── left sidebar — chat ── */
-.chat-sidebar {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  border-right: 1px solid var(--border);
-}
-
-.messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
+.chat-sidebar { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }
+.messages { flex: 1; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 18px; }
 .messages::-webkit-scrollbar { width: 4px; }
-.messages::-webkit-scrollbar-track { background: transparent; }
 .messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
-
 .msg { display: flex; flex-direction: column; gap: 6px; }
 .msg.me  { align-items: flex-end; }
 .msg.bot { align-items: flex-start; }
-
-.msg-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: .12em;
-  color: var(--fg-5);
-}
-
-.msg-bubble {
-  max-width: 92%;
-  padding: 10px 14px;
-  border-radius: 14px;
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--fg-2);
-  text-wrap: pretty;
-}
+.msg-meta { display: flex; align-items: center; gap: 6px; font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .12em; color: var(--fg-5); }
+.msg-bubble { max-width: 92%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.55; color: var(--fg-2); text-wrap: pretty; }
 .msg.me  .msg-bubble { background: #1c1c1f; border: 1px solid var(--border-mid); }
 .msg.bot .msg-bubble { background: transparent; border: 1px solid transparent; }
-
-.msg-steps {
-  width: 92%;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #0e0e10;
-  border: 1px solid var(--border);
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
+.msg-steps { width: 92%; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: #0e0e10; border: 1px solid var(--border); font-family: 'Geist Mono', monospace; font-size: 12px; }
 .step { display: flex; align-items: center; gap: 8px; }
 
 /* ── composer ── */
 .composer-wrap { padding: 12px; }
-.composer {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  border: 1px solid var(--border-mid);
-  box-shadow: 0 10px 30px rgba(0,0,0,.4);
-  transition: border-color .2s;
-}
-.composer textarea {
-  width: 100%;
-  resize: none;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--fg);
-  font-size: 14px;
-  line-height: 1.5;
-}
-.composer-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px;
-}
-.tool-btn {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  border-radius: 9px;
-  border: none;
-  background: transparent;
-  color: var(--fg-4);
-}
+.composer { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border-mid); box-shadow: 0 10px 30px rgba(0,0,0,.4); transition: border-color .2s; }
+.composer textarea { width: 100%; resize: none; background: transparent; border: none; outline: none; color: var(--fg); font-size: 14px; line-height: 1.5; }
+.composer-row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+.tool-btn { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px; border: none; background: transparent; color: var(--fg-4); }
 .tool-btn:hover { background: #1c1c1f; color: var(--fg); }
-.model-chip {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 28px;
-  padding: 0 8px;
-  margin-left: 4px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--fg-3);
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
+.model-chip { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px; margin-left: 4px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--fg-3); font-family: 'Geist Mono', monospace; font-size: 11px; }
 .model-chip:hover { background: var(--surface2); }
 .composer-spacer { flex: 1; }
-.btn-mic {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 1px solid var(--border-mid);
-  background: var(--surface2);
-  color: var(--fg-2);
-}
-.btn-mic:hover { border-color: rgba(255,255,255,.2); }
+.btn-mic  { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border-mid); background: var(--surface2); color: var(--fg-2); transition: all .15s; }
 .btn-mic:active { transform: scale(.94); }
-.btn-send {
-  width: 34px;
-  height: 34px;
-  margin-left: 6px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 1px solid rgba(255,236,170,.5);
-  background: var(--gold-grad);
-  color: #1a1204;
-}
+.btn-send { width: 34px; height: 34px; margin-left: 6px; display: grid; place-items: center; border-radius: 50%; border: 1px solid rgba(255,236,170,.5); background: var(--gold-grad); color: #1a1204; }
 .btn-send:hover  { filter: brightness(1.08); }
 .btn-send:active { transform: scale(.94); }
 
 /* ── main panel ── */
-.main-panel {
+.main-panel { display: flex; flex-direction: column; min-height: 0; background: #0c0c0e; padding: 14px; gap: 10px; }
+.url-bar { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--fg-4); flex-shrink: 0; }
+.url-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live-badge { color: var(--green); }
+.preview-frame { flex: 1; min-height: 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); }
+
+/* ── Crane IT landing page preview ── */
+.crane-preview { height: 100%; overflow-y: auto; background: #09090b; font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.crane-preview::-webkit-scrollbar { width: 6px; }
+.crane-preview::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 4px; }
+
+.crane-hero {
+  position: relative;
+  width: 100%;
+  min-height: 520px;
+  overflow: hidden;
+  background: #09090b;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  background: #0c0c0e;
-  padding: 14px;
-  gap: 10px;
 }
+.crane-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+}
+.crane-hero-overlay-top    { position: absolute; inset: 0 0 auto; height: 200px; background: linear-gradient(180deg, rgba(9,9,11,.88) 0%, rgba(9,9,11,0) 100%); pointer-events: none; }
+.crane-hero-overlay-bottom { position: absolute; inset: auto 0 0; height: 55%; background: linear-gradient(0deg, #09090b 0%, rgba(9,9,11,.88) 45%, rgba(9,9,11,0) 100%); pointer-events: none; }
 
-.url-bar {
-  display: flex;
+.crane-nav {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 8px;
-  height: 34px;
-  padding: 0 10px;
-  border-radius: var(--radius-md);
+  gap: 16px;
+  padding: 20px clamp(14px,3vw,36px);
+  animation: rise .8s cubic-bezier(.2,.8,.2,1) .2s both;
+}
+.crane-logo { display: flex; align-items: flex-end; gap: 6px; justify-self: start; }
+.crane-logo-c {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(60px,8vw,110px);
+  line-height: .74;
+  font-weight: 700;
+  letter-spacing: -.04em;
+  background: var(--gold-chrome);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,.55)) drop-shadow(0 0 18px rgba(245,196,81,.25));
+  animation: chrome 5s ease-in-out infinite;
+}
+.crane-logo-text { display: flex; flex-direction: column; gap: 6px; padding-bottom: 4px; }
+.crane-logo-name { font-size: clamp(16px,2vw,26px); font-weight: 700; letter-spacing: .24em; color: #fafafa; line-height: 1; text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+.crane-logo-sub  { font-family: 'Geist Mono', monospace; font-size: clamp(10px,1vw,13px); font-weight: 600; letter-spacing: .4em; color: var(--gold); line-height: 1; }
+.crane-nav-links {
+  justify-self: center;
+  display: flex; align-items: center; gap: 2px;
+  padding: 5px;
+  border-radius: 999px;
+  background: rgba(24,24,27,.55);
+  border: 1px solid rgba(255,255,255,.1);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: 0 8px 30px rgba(0,0,0,.35);
+}
+.crane-nav-links a { padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 500; color: #d4d4d8; transition: background .15s, color .15s; }
+.crane-nav-links a.active { background: rgba(255,255,255,.1); color: #fafafa; }
+.crane-nav-links a:hover { color: #fafafa; }
+.crane-status-pill { justify-self: end; display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; background: rgba(24,24,27,.55); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: .06em; color: #d4d4d8; }
+.crane-status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse-dot 2s ease-in-out infinite; }
+
+.crane-hero-body {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 0 clamp(14px,3vw,36px) clamp(20px,5vh,40px);
+  text-align: center;
+}
+.crane-eyebrow { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .18em; color: #a1a1aa; animation: rise .8s cubic-bezier(.2,.8,.2,1) 1.2s both; }
+.crane-headline-row { display: flex; flex-direction: column; gap: 4px; min-height: 80px; }
+.crane-slide {
+  font-size: clamp(20px,2.8vw,44px);
+  font-weight: 600;
+  letter-spacing: -.04em;
+  color: #fafafa;
+  line-height: 1;
+  transition: opacity .7s, transform .7s;
+}
+.crane-slide em { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; color: #f5c451; }
+.crane-slide.hidden { opacity: 0; height: 0; overflow: hidden; }
+.crane-dots { display: flex; gap: 6px; justify-content: center; }
+.crane-dot { height: 3px; border-radius: 2px; transition: all .5s; }
+.crane-cta-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.crane-cta {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: clamp(14px,2vh,22px) clamp(32px,4vw,60px);
+  border-radius: 999px;
+  background: var(--gold-grad);
+  color: #1a1204;
+  font-size: clamp(14px,1.6vw,22px);
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,236,170,.6);
+  box-shadow: 0 14px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 4px rgba(80,50,0,.35);
+  transition: filter .15s, transform .12s;
+}
+.crane-cta:hover  { filter: brightness(1.12); transform: scale(1.04); }
+.crane-cta:active { transform: scale(.97); }
+.crane-cta-sub { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .16em; color: #71717a; }
+
+/* ── stats strip ── */
+.crane-stats {
+  background: #09090b;
+  border-top: 1px solid rgba(255,255,255,.06);
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 0;
+  padding: 0;
+}
+.crane-stat {
+  padding: 20px 16px;
+  border-right: 1px solid rgba(255,255,255,.06);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  text-align: center;
+}
+.crane-stat:last-child { border-right: none; }
+.crane-stat-num { font-family: 'Geist Mono', monospace; font-size: clamp(20px,2.4vw,32px); font-weight: 700; color: var(--gold); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.crane-stat-label { font-size: 11px; color: var(--fg-5); letter-spacing: .06em; }
+
+/* ── services ── */
+.crane-services { padding: clamp(28px,5vw,56px) clamp(14px,3vw,36px); background: #09090b; }
+.crane-section-eyebrow { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .26em; color: var(--fg-5); margin-bottom: 12px; }
+.crane-section-heading { font-size: clamp(22px,2.8vw,38px); font-weight: 700; letter-spacing: -.03em; color: var(--fg); margin-bottom: clamp(20px,4vw,40px); line-height: 1.05; }
+.crane-section-heading em { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; color: var(--gold); }
+.crane-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,220px),1fr)); gap: 12px; }
+.crane-card {
+  padding: 20px;
+  border-radius: 14px;
   background: var(--surface);
   border: 1px solid var(--border);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--fg-4);
-  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color .2s, background .2s;
 }
-.url-text {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.crane-card:hover { border-color: rgba(238,202,80,.25); background: #131315; }
+.crane-card-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(138deg, rgba(108,74,8,.6), rgba(198,162,58,.4));
+  border: 1px solid rgba(238,202,80,.25);
+  display: grid; place-items: center;
+  color: var(--gold);
 }
-.live-badge { color: var(--green); }
+.crane-card-title { font-size: 15px; font-weight: 600; color: var(--fg); }
+.crane-card-desc  { font-size: 13px; line-height: 1.55; color: var(--fg-4); }
 
-.preview-frame {
-  flex: 1;
-  min-height: 0;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-
-/* hide when code tab active */
-.preview-pane { height: 100%; overflow-y: auto; background: #0d0a08; color: #f1e3d0; font-family: var(--font-sans); }
-.preview-pane::-webkit-scrollbar { width: 6px; }
-.preview-pane::-webkit-scrollbar-thumb { background: rgba(241,227,208,.15); border-radius: 4px; }
-
-.code-pane {
-  height: 100%;
-  overflow-y: auto;
-  margin: 0;
-  padding: 18px 20px;
-  background: #0a0a0c;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--fg-3);
-}
+/* ── code pane ── */
+.code-pane { height: 100%; overflow-y: auto; margin: 0; padding: 18px 20px; background: #0a0a0c; font-family: 'Geist Mono', monospace; font-size: 13px; line-height: 1.7; color: var(--fg-3); }
 .code-pane::-webkit-scrollbar { width: 6px; }
 .code-pane::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
-
-/* ── preview content (Aymani Hair Spa) ── */
-.spa-hero {
-  position: relative;
-  min-height: min(100%, 520px);
-  display: flex;
-  flex-direction: column;
-  background: #0d0a08;
-  overflow: hidden;
-}
-.spa-hero-bg {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 120% 120% at 50% 60%, #3b2215 0%, #1a100a 45%, #0d0a08 100%);
-}
-.spa-hero-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(13,10,8,.78) 0%, rgba(13,10,8,.25) 38%, rgba(13,10,8,.92) 100%);
-}
-.spa-nav {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px 20px;
-  padding: 20px clamp(16px,3vw,36px);
-}
-.spa-brand { display: flex; align-items: center; gap: 16px; }
-.spa-logo-mark {
-  width: 68px;
-  height: 68px;
-  border-radius: 34px 34px 8px 8px;
-  border: 1px solid #e9cf8a;
-  box-shadow: 0 0 0 4px rgba(13,10,8,.35), 0 0 0 5px rgba(233,207,138,.35), 0 8px 30px rgba(0,0,0,.5);
-  background: rgba(13,10,8,.45);
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-.spa-logo-letter {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 46px;
-  line-height: 1;
-  background: linear-gradient(135deg,#a8782f,#fff1c4 45%,#c29a45 60%,#a8782f);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.spa-name-block { display: flex; flex-direction: column; gap: 7px; }
-.spa-name {
-  font-family: var(--font-serif);
-  font-size: clamp(28px,4vw,50px);
-  line-height: .9;
-  letter-spacing: .02em;
-  white-space: nowrap;
-  background: linear-gradient(135deg, #f1e3d0 0%, #fff1c4 40%, #e9cf8a 70%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 10px rgba(0,0,0,.5));
-}
-.spa-sub {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: .5em;
-  color: #e9cf8a;
-  white-space: nowrap;
-}
-.spa-sub-rule { width: 22px; height: 1px; background: #e9cf8a; }
-.spa-nav-links { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 12px; letter-spacing: .06em; color: #e8d8c2; }
-.spa-book-btn {
-  padding: 9px 18px;
-  border-radius: 999px;
-  border: 1px solid #e9cf8a;
-  background: rgba(13,10,8,.4);
-  font-size: 12px;
-  color: #f6e2a8;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.spa-hero-body {
-  position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 16px;
-  padding: 40px clamp(16px,3vw,36px) 36px;
-}
-.spa-location { font-family: var(--font-mono); font-size: 10px; letter-spacing: .26em; color: #f2b8a8; }
-.spa-headline {
-  font-family: var(--font-serif);
-  font-weight: 400;
-  font-size: clamp(32px,6vw,72px);
-  line-height: .95;
-  max-width: 660px;
-  text-wrap: balance;
-  color: #f1e3d0;
-}
-.spa-headline em { font-style: italic; color: #e9cf8a; }
-.spa-tagline { font-size: 14px; line-height: 1.6; color: #d9c6ae; max-width: 400px; }
-.spa-ctas { display: flex; flex-wrap: wrap; gap: 10px; }
-.spa-cta-primary {
-  padding: 13px 24px;
-  border-radius: 999px;
-  background: linear-gradient(138deg, #8a6420, #e9cf8a 50%, #8a6420);
-  color: #1a1204;
-  font-size: 13px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-}
-.spa-cta-secondary {
-  padding: 13px 24px;
-  border-radius: 999px;
-  border: 1px solid rgba(241,227,208,.4);
-  background: transparent;
-  color: #f1e3d0;
-  font-size: 13px;
-  cursor: pointer;
-}
-.spa-services {
-  padding: clamp(32px,6vw,64px) clamp(16px,3vw,36px);
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%,240px), 1fr));
-  gap: clamp(20px,4vw,48px);
-  background: #0d0a08;
-}
-.spa-section-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: .26em; color: #b88a5a; }
-.spa-section-heading { font-family: var(--font-serif); font-weight: 400; font-size: clamp(24px,3vw,40px); line-height: 1; text-wrap: balance; color: #f1e3d0; }
-.spa-section-heading em { font-style: italic; color: #e9cf8a; }
-.spa-menu-list { display: flex; flex-direction: column; }
-.spa-menu-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  padding: 14px 0;
-  border-top: 1px solid rgba(241,227,208,.12);
-}
-.spa-item-name { font-family: var(--font-serif); font-size: 20px; color: #f1e3d0; }
-.spa-item-desc { font-size: 12px; line-height: 1.5; color: #a8937c; }
-.spa-item-price { font-family: var(--font-mono); font-size: 12px; color: #e9cf8a; white-space: nowrap; }
-.spa-rule { border-top: 1px solid rgba(241,227,208,.12); margin-top: 0; }
-.spa-booking-strip {
-  margin: 0 clamp(16px,3vw,36px) clamp(20px,4vw,36px);
-  padding: clamp(20px,4vw,40px);
-  border-radius: 20px;
-  border: 1px solid rgba(233,207,138,.35);
-  background: linear-gradient(135deg, rgba(184,122,75,.18), rgba(13,10,8,0));
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-.spa-booking-title { font-family: var(--font-serif); font-size: clamp(22px,3vw,34px); line-height: 1.05; color: #f1e3d0; }
-.spa-booking-title em { font-style: italic; color: #e9cf8a; }
-.spa-booking-hours { font-size: 13px; color: #c9b49c; margin-top: 6px; }
-.spa-booking-btn {
-  padding: 14px 28px;
-  border-radius: 999px;
-  background: linear-gradient(138deg, #8a6420, #e9cf8a 50%, #8a6420);
-  color: #1a1204;
-  font-size: 14px;
-  font-weight: 600;
-  border: none;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.spa-footer {
-  padding: 20px clamp(16px,3vw,36px) 28px;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 10px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: .14em;
-  color: #7a6a58;
-  background: #0d0a08;
-}
+.token-keyword  { color: #c084fc; }
+.token-fn       { color: #60a5fa; }
+.token-str      { color: #86efac; }
+.token-comment  { color: #52525b; font-style: italic; }
+.token-jsx      { color: #f9a8d4; }
+.token-prop     { color: var(--gold); }
 
 /* ── right sidebar — agent ── */
-.agent-sidebar {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  border-left: 1px solid var(--border);
-  padding: 14px;
-  gap: 12px;
-}
-
-.agent-card {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  border-radius: 20px;
-  overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--border);
-}
-.agent-card-bg {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 100% 140% at 50% 80%, #1a0e06 0%, #0e0a04 50%, #111113 100%);
-}
-.agent-card-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(0deg, rgba(9,9,11,.92) 0%, rgba(9,9,11,0) 40%);
-}
-.live-badge-pill {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  background: rgba(9,9,11,.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-mid);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: .12em;
-  color: var(--fg);
-}
-.live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--red);
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-.agent-info {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.agent-wave {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  height: 18px;
-}
-.wave-bar {
-  width: 3px;
-  height: 18px;
-  border-radius: 2px;
-  background: var(--fg);
-  opacity: .85;
-  transform-origin: center;
-}
+.agent-sidebar { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--border); padding: 14px; gap: 12px; }
+.agent-card { position: relative; flex: 1; min-height: 0; border-radius: 20px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); }
+.agent-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+.agent-card-overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(9,9,11,.92) 0%, rgba(9,9,11,0) 45%); }
+.live-badge-pill { position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: rgba(9,9,11,.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border-mid); font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .12em; color: var(--fg); }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: pulse-dot 2s ease-in-out infinite; }
+.agent-info { position: absolute; left: 16px; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
+.agent-wave { display: flex; align-items: center; gap: 3px; height: 18px; }
+.wave-bar { width: 3px; height: 18px; border-radius: 2px; background: var(--fg); opacity: .85; transform-origin: center; }
 .agent-name { font-size: 18px; font-weight: 600; letter-spacing: -.01em; color: var(--fg); }
-.agent-role { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; color: var(--fg-4); }
+.agent-role { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .14em; color: var(--fg-4); }
+.wb1 {animation:wave .60s ease-in-out 0s     infinite} .wb2 {animation:wave .70s ease-in-out -.13s infinite}
+.wb3 {animation:wave .65s ease-in-out -.26s infinite} .wb4 {animation:wave .80s ease-in-out -.39s infinite}
+.wb5 {animation:wave .62s ease-in-out -.52s infinite} .wb6 {animation:wave .75s ease-in-out -.65s infinite}
+.wb7 {animation:wave .68s ease-in-out -.78s infinite} .wb8 {animation:wave .70s ease-in-out -.91s infinite}
+.wb9 {animation:wave .63s ease-in-out -1.04s infinite} .wb10{animation:wave .72s ease-in-out -1.17s infinite}
+.wb11{animation:wave .66s ease-in-out -1.30s infinite} .wb12{animation:wave .69s ease-in-out -1.43s infinite}
 
-/* wave bars with varied timings */
-.wb1  { animation: wave 0.6s ease-in-out 0s      infinite; }
-.wb2  { animation: wave 0.7s ease-in-out -0.13s  infinite; }
-.wb3  { animation: wave 0.65s ease-in-out -0.26s infinite; }
-.wb4  { animation: wave 0.8s ease-in-out -0.39s  infinite; }
-.wb5  { animation: wave 0.62s ease-in-out -0.52s infinite; }
-.wb6  { animation: wave 0.75s ease-in-out -0.65s infinite; }
-.wb7  { animation: wave 0.68s ease-in-out -0.78s infinite; }
-.wb8  { animation: wave 0.7s ease-in-out -0.91s  infinite; }
-.wb9  { animation: wave 0.63s ease-in-out -1.04s infinite; }
-.wb10 { animation: wave 0.72s ease-in-out -1.17s infinite; }
-.wb11 { animation: wave 0.66s ease-in-out -1.30s infinite; }
-.wb12 { animation: wave 0.69s ease-in-out -1.43s infinite; }
-
-.caption-card {
-  padding: 12px 14px;
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--fg-3);
-  text-wrap: pretty;
-}
-.caption-label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: .14em;
-  color: var(--fg-5);
-  display: block;
-  margin-bottom: 4px;
-}
-
-.agent-controls {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-}
-.ctrl-btn {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 1px solid var(--border-mid);
-  background: var(--surface2);
-  color: var(--fg-2);
-  transition: border-color .15s, background .15s;
-}
+.caption-card { padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); font-size: 13px; line-height: 1.5; color: var(--fg-3); text-wrap: pretty; }
+.caption-label { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .14em; color: var(--fg-5); display: block; margin-bottom: 4px; }
+.agent-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.ctrl-btn { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border-mid); background: var(--surface2); color: var(--fg-2); transition: all .15s; }
 .ctrl-btn:hover { background: #222224; border-color: rgba(255,255,255,.2); }
-.ctrl-btn.end {
-  border: none;
-  background: var(--red);
-  color: #fff;
-}
+.ctrl-btn.end { border: none; background: #dc2626; color: #fff; }
 .ctrl-btn.end:hover { background: #ef4444; }
 
-/* ── responsive collapse ── */
+/* ── responsive ── */
 @media (max-width: 1100px) {
   .body-grid { grid-template-columns: clamp(260px,32vw,360px) minmax(0,1fr); }
   .agent-sidebar { display: none; }
@@ -755,31 +359,24 @@ textarea::placeholder { color: var(--fg-5); }
       <span class="logo-rane">RANE</span>
       <span class="logo-tag">BUILDER</span>
     </a>
-
     <div class="divider-v"></div>
-
     <button class="btn-project">
-      aymani-hair-spa
+      crane-it
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
     </button>
-
     <button class="btn-new">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
       New
     </button>
-
     <div class="header-spacer"></div>
-
     <div class="tab-group">
       <button class="tab active" onclick="setTab('preview')">PREVIEW</button>
       <button class="tab inactive" onclick="setTab('code')">CODE</button>
     </div>
-
     <div class="status-pill">
       <span class="status-dot"></span>
       berylize-7b · CPU · <span id="tps">94</span> tok/s
     </div>
-
     <button class="btn-ship">SHIP</button>
   </header>
 
@@ -792,27 +389,32 @@ textarea::placeholder { color: var(--fg-5); }
 
         <div class="msg me">
           <div class="msg-meta"><span>YOU</span><span>· VOICE</span></div>
-          <div class="msg-bubble">Build a landing page for Aymani Hair Spa in Chalmette, LA. Dark marble, warm gold, luxurious.</div>
+          <div class="msg-bubble">Build me the Crane IT landing page — dark, cinematic, that gold chrome C logo, and put Beryl front and center with the crane imagery.</div>
         </div>
 
         <div class="msg bot">
           <div class="msg-meta"><span>BERYL</span></div>
-          <div class="msg-bubble">On it — dark marble palette, gold accents, serif headline, booking CTA. Scaffolding now.</div>
+          <div class="msg-bubble">On it — pulling your uploads now. Scaffolding the hero with the crane scene, gold chrome branding, and that animated headline stack.</div>
           <div class="msg-steps">
-            <div class="step"><span style="color:#a1a1aa">✓</span><span style="color:#a1a1aa">Created src/App.tsx</span></div>
-            <div class="step"><span style="color:#a1a1aa">✓</span><span style="color:#a1a1aa">Added hero + nav</span></div>
-            <div class="step"><span style="color:var(--gold)">●</span><span style="color:var(--gold)">Running preview</span></div>
+            <div class="step"><span style="color:#a1a1aa">✓</span><span style="color:#a1a1aa">Loaded uploads/hero-bg.jpeg</span></div>
+            <div class="step"><span style="color:#a1a1aa">✓</span><span style="color:#a1a1aa">Created src/App.tsx + hero section</span></div>
+            <div class="step"><span style="color:var(--gold)">●</span><span style="color:var(--gold)">Rendering preview…</span></div>
           </div>
         </div>
 
         <div class="msg me">
-          <div class="msg-meta"><span>YOU</span><span>· VOICE</span></div>
-          <div class="msg-bubble">Show off the salon interior and add services.</div>
+          <div class="msg-meta"><span>YOU</span><span>· TEXT</span></div>
+          <div class="msg-bubble">Add the services section and the stats strip. Keep the gold accents consistent.</div>
         </div>
 
         <div class="msg bot">
           <div class="msg-meta"><span>BERYL</span></div>
-          <div class="msg-bubble">Done: hero with your salon photo, services &amp; pricing, the space gallery and booking. Want a team section next?</div>
+          <div class="msg-bubble">Done. Stats strip (builds, deploys, models, uptime), four service cards below. The gold gradient is pulled from your design token — consistent all the way down.</div>
+          <div class="msg-steps">
+            <div class="step"><span style="color:#a1a1aa">✓</span><span style="color:#a1a1aa">Added &lt;StatsStrip /&gt;</span></div>
+            <div class="step"><span style="color:#a1a1aa">✓</span><span style="color:#a1a1aa">Added &lt;Services /&gt; (4 cards)</span></div>
+            <div class="step"><span style="color:#34d399">✓</span><span style="color:#34d399">Live — localhost:5173</span></div>
+          </div>
         </div>
 
       </div>
@@ -821,7 +423,6 @@ textarea::placeholder { color: var(--fg-5); }
         <div class="composer" id="composer">
           <textarea id="draftInput" rows="2" placeholder="Describe it, or tap the mic and just say it…"></textarea>
           <div class="composer-row">
-            <!-- tool icons -->
             <button class="tool-btn" title="Attach">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
             </button>
@@ -856,128 +457,156 @@ textarea::placeholder { color: var(--fg-5); }
     <main class="main-panel">
       <div class="url-bar">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg>
-        <span class="url-text">localhost:5173 / aymani-hair-spa</span>
+        <span class="url-text">localhost:5173 / crane-it</span>
         <span class="live-badge">● live</span>
       </div>
 
       <div class="preview-frame">
 
         <!-- PREVIEW TAB -->
-        <div class="preview-pane" id="previewPane">
+        <div class="crane-preview" id="previewPane">
+
           <!-- hero -->
-          <div class="spa-hero">
-            <div class="spa-hero-bg"></div>
-            <div class="spa-hero-overlay"></div>
-            <nav class="spa-nav">
-              <div class="spa-brand">
-                <div class="spa-logo-mark">
-                  <span class="spa-logo-letter">A</span>
+          <div class="crane-hero">
+            <img class="crane-hero-img" src="uploads/hero-bg.jpeg" alt="Crane IT hero — Beryl with innovation crane scene">
+            <div class="crane-hero-overlay-top"></div>
+            <div class="crane-hero-overlay-bottom"></div>
+
+            <nav class="crane-nav">
+              <a href="#" class="crane-logo">
+                <span class="crane-logo-c">C</span>
+                <div class="crane-logo-text">
+                  <span class="crane-logo-name">RANE IT</span>
+                  <span class="crane-logo-sub">IDE</span>
                 </div>
-                <div class="spa-name-block">
-                  <span class="spa-name">Aymani</span>
-                  <span class="spa-sub"><span class="spa-sub-rule"></span>HAIR SPA</span>
-                </div>
+              </a>
+              <div class="crane-nav-links">
+                <a href="#" class="active">Home</a>
+                <a href="#">Services</a>
+                <a href="#">Our Stack</a>
+                <a href="#">Contact</a>
               </div>
-              <div class="spa-nav-links">
-                <span>Services</span><span>The Space</span><span>Visit</span>
+              <div class="crane-status-pill">
+                <span class="crane-status-dot"></span>
+                LOCAL · 0 GPU
               </div>
-              <button class="spa-book-btn">Book now</button>
             </nav>
-            <div class="spa-hero-body">
-              <span class="spa-location">CHALMETTE, LOUISIANA</span>
-              <h2 class="spa-headline">Where hair becomes <em>ritual.</em></h2>
-              <p class="spa-tagline">Curl-first cuts, color and silk presses in Chalmette's newest hair spa — marble, warm light and nowhere to rush.</p>
-              <div class="spa-ctas">
-                <button class="spa-cta-primary">Book a chair</button>
-                <button class="spa-cta-secondary">Explore services</button>
+
+            <div class="crane-hero-body">
+              <div class="crane-eyebrow">CRANE IT — LOCAL-FIRST AI IDE</div>
+              <div class="crane-headline-row" id="slideWrap">
+                <div class="crane-slide" id="slide0">Build <em>faster</em></div>
               </div>
+              <div class="crane-dots" id="craneDots">
+                <span class="crane-dot" style="width:28px;background:var(--gold)"></span>
+                <span class="crane-dot" style="width:8px;background:rgba(255,255,255,.2)"></span>
+                <span class="crane-dot" style="width:8px;background:rgba(255,255,255,.2)"></span>
+              </div>
+              <div class="crane-cta-wrap">
+                <a href="#" class="crane-cta">Get shit done</a>
+                <span class="crane-cta-sub">INTERNAL BUILD · NOT FOR RESALE</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- stats -->
+          <div class="crane-stats">
+            <div class="crane-stat">
+              <span class="crane-stat-num" id="s1">12,847</span>
+              <span class="crane-stat-label">Builds shipped</span>
+            </div>
+            <div class="crane-stat">
+              <span class="crane-stat-num" id="s2">98.7%</span>
+              <span class="crane-stat-label">Deploy success</span>
+            </div>
+            <div class="crane-stat">
+              <span class="crane-stat-num">34</span>
+              <span class="crane-stat-label">Models supported</span>
+            </div>
+            <div class="crane-stat">
+              <span class="crane-stat-num">99.9%</span>
+              <span class="crane-stat-label">Uptime SLA</span>
             </div>
           </div>
 
           <!-- services -->
-          <div class="spa-services">
-            <div style="display:flex;flex-direction:column;gap:12px">
-              <span class="spa-section-label">01 — SERVICES</span>
-              <h3 class="spa-section-heading">Crafted for <em>every texture.</em></h3>
-            </div>
-            <div class="spa-menu-list">
-              <div class="spa-menu-item">
-                <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
-                  <span class="spa-item-name">Silk press</span>
-                  <span class="spa-item-desc">Smooth, bouncy, heat-protected.</span>
+          <div class="crane-services">
+            <div class="crane-section-eyebrow">WHAT WE BUILD</div>
+            <div class="crane-section-heading">Everything your AI product <em>needs</em></div>
+            <div class="crane-cards">
+              <div class="crane-card">
+                <div class="crane-card-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                 </div>
-                <span class="spa-item-price">from $85</span>
+                <div class="crane-card-title">Local-first IDE</div>
+                <div class="crane-card-desc">Code, run and deploy from your machine. No cloud lock-in, full model control, zero data leakage.</div>
               </div>
-              <div class="spa-menu-item">
-                <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
-                  <span class="spa-item-name">Curl cut &amp; shape</span>
-                  <span class="spa-item-desc">Dry-cut to your natural pattern.</span>
+              <div class="crane-card">
+                <div class="crane-card-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                 </div>
-                <span class="spa-item-price">from $70</span>
+                <div class="crane-card-title">Model orchestration</div>
+                <div class="crane-card-desc">Route tasks to the right model automatically — Berylize-7B for speed, frontier models for depth.</div>
               </div>
-              <div class="spa-menu-item">
-                <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
-                  <span class="spa-item-name">Color &amp; gloss</span>
-                  <span class="spa-item-desc">Custom tones, root to tip.</span>
+              <div class="crane-card">
+                <div class="crane-card-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
                 </div>
-                <span class="spa-item-price">from $120</span>
+                <div class="crane-card-title">Live preview</div>
+                <div class="crane-card-desc">See every change instantly. Hot-reload preview streams directly into the builder — no context switch.</div>
               </div>
-              <div class="spa-menu-item">
-                <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
-                  <span class="spa-item-name">Scalp spa wash</span>
-                  <span class="spa-item-desc">Massage, steam and deep treatment.</span>
+              <div class="crane-card">
+                <div class="crane-card-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                 </div>
-                <span class="spa-item-price">from $55</span>
+                <div class="crane-card-title">One-click deploy</div>
+                <div class="crane-card-desc">SHIP button pushes to your infra, runs tests, and rolls back automatically on failure.</div>
               </div>
-              <div class="spa-rule"></div>
             </div>
           </div>
 
-          <!-- booking strip -->
-          <div class="spa-booking-strip">
-            <div>
-              <div class="spa-booking-title">Your chair is <em>waiting.</em></div>
-              <div class="spa-booking-hours">Tue–Sat · 9am–7pm · Chalmette, LA</div>
-            </div>
-            <button class="spa-booking-btn">Book your appointment</button>
-          </div>
-
-          <!-- footer -->
-          <div class="spa-footer">
-            <span>© 2026 AYMANI HAIR SPA</span>
-            <span>CHALMETTE, LA</span>
-          </div>
-        </div>
+        </div><!-- /crane-preview -->
 
         <!-- CODE TAB -->
-        <pre class="code-pane" id="codePane" hidden>export default function App() {
-  return (
-    &lt;main className="bg-ink"&gt;
-      &lt;Nav
-        brand="Aymani Hair Spa"
-        links={['Services', 'The Space', 'Visit']}
-      /&gt;
-      &lt;Hero
-        eyebrow="Chalmette, Louisiana"
-        title="Where hair becomes ritual."
-        primary="Book a chair"
-        secondary="Explore services"
-      /&gt;
-      &lt;Services
-        items={[
-          { name: 'Silk press',      desc: 'Smooth, bouncy, heat-protected.',      price: '$85' },
-          { name: 'Curl cut & shape',desc: 'Dry-cut to your natural pattern.',     price: '$70' },
-          { name: 'Color & gloss',   desc: 'Custom tones, root to tip.',           price: '$120' },
-          { name: 'Scalp spa wash',  desc: 'Massage, steam and deep treatment.',   price: '$55' },
+        <pre class="code-pane" id="codePane" hidden><span class="token-comment">// src/App.tsx — crane-it landing page</span>
+<span class="token-keyword">import</span> { useState, useEffect } <span class="token-keyword">from</span> <span class="token-str">'react'</span>
+<span class="token-keyword">import</span> { Hero, StatsStrip, Services } <span class="token-keyword">from</span> <span class="token-str">'./components'</span>
+
+<span class="token-keyword">const</span> <span class="token-prop">SLIDES</span> = [
+  { a: <span class="token-str">'Build'</span>,  b: <span class="token-str">'faster'</span>  },
+  { a: <span class="token-str">'Deploy'</span>, b: <span class="token-str">'smarter'</span> },
+  { a: <span class="token-str">'Ship'</span>,   b: <span class="token-str">'confidently'</span> },
+]
+
+<span class="token-keyword">export default function</span> <span class="token-fn">App</span>() {
+  <span class="token-keyword">const</span> [slide, setSlide] = useState(<span class="token-str">0</span>)
+
+  useEffect(() =&gt; {
+    <span class="token-keyword">const</span> t = setInterval(
+      () =&gt; setSlide(s =&gt; (s + <span class="token-str">1</span>) % SLIDES.length),
+      <span class="token-str">3200</span>
+    )
+    <span class="token-keyword">return</span> () =&gt; clearInterval(t)
+  }, [])
+
+  <span class="token-keyword">return</span> (
+    <span class="token-jsx">&lt;main</span> <span class="token-prop">className</span>=<span class="token-str">"bg-ink"</span><span class="token-jsx">&gt;</span>
+      <span class="token-jsx">&lt;Hero</span>
+        <span class="token-prop">bgSrc</span>=<span class="token-str">"uploads/hero-bg.jpeg"</span>
+        <span class="token-prop">slide</span>={SLIDES[slide]}
+        <span class="token-prop">cta</span>=<span class="token-str">"Get shit done"</span>
+      <span class="token-jsx">/&gt;</span>
+      <span class="token-jsx">&lt;StatsStrip</span>
+        <span class="token-prop">items</span>={[
+          { n: <span class="token-str">'12,847'</span>, label: <span class="token-str">'Builds shipped'</span> },
+          { n: <span class="token-str">'98.7%'</span>,  label: <span class="token-str">'Deploy success'</span> },
+          { n: <span class="token-str">'34'</span>,     label: <span class="token-str">'Models supported'</span> },
+          { n: <span class="token-str">'99.9%'</span>,  label: <span class="token-str">'Uptime SLA'</span> },
         ]}
-      /&gt;
-      &lt;Booking
-        hours="Tue–Sat · 9am–7pm"
-        location="Chalmette, LA"
-        cta="Book your appointment"
-      /&gt;
-    &lt;/main&gt;
-  );
+      <span class="token-jsx">/&gt;</span>
+      <span class="token-jsx">&lt;Services /&gt;</span>
+    <span class="token-jsx">&lt;/main&gt;</span>
+  )
 }</pre>
 
       </div><!-- /preview-frame -->
@@ -986,27 +615,19 @@ textarea::placeholder { color: var(--fg-5); }
     <!-- ── right: agent ── -->
     <aside class="agent-sidebar">
       <div class="agent-card">
-        <div class="agent-card-bg"></div>
+        <img src="uploads/beryl.jpeg" alt="Beryl — Build Agent">
         <div class="agent-card-overlay"></div>
-
         <div class="live-badge-pill">
           <span class="live-dot"></span>LIVE
         </div>
-
         <div class="agent-info">
           <div class="agent-wave">
-            <span class="wave-bar wb1"></span>
-            <span class="wave-bar wb2"></span>
-            <span class="wave-bar wb3"></span>
-            <span class="wave-bar wb4"></span>
-            <span class="wave-bar wb5"></span>
-            <span class="wave-bar wb6"></span>
-            <span class="wave-bar wb7"></span>
-            <span class="wave-bar wb8"></span>
-            <span class="wave-bar wb9"></span>
-            <span class="wave-bar wb10"></span>
-            <span class="wave-bar wb11"></span>
-            <span class="wave-bar wb12"></span>
+            <span class="wave-bar wb1"></span><span class="wave-bar wb2"></span>
+            <span class="wave-bar wb3"></span><span class="wave-bar wb4"></span>
+            <span class="wave-bar wb5"></span><span class="wave-bar wb6"></span>
+            <span class="wave-bar wb7"></span><span class="wave-bar wb8"></span>
+            <span class="wave-bar wb9"></span><span class="wave-bar wb10"></span>
+            <span class="wave-bar wb11"></span><span class="wave-bar wb12"></span>
           </div>
           <div class="agent-name">Beryl</div>
           <div class="agent-role">BUILD AGENT · BERYL LABS</div>
@@ -1015,7 +636,7 @@ textarea::placeholder { color: var(--fg-5); }
 
       <div class="caption-card">
         <span class="caption-label">SAYING</span>
-        "Hi Aymani. You can text me or click the mic and have a real-time live conversation — let's get it done, girl!"
+        "Stats strip and services are live. Want me to wire up the contact form next, or should we move straight to deploy?"
       </div>
 
       <div class="agent-controls">
@@ -1044,79 +665,82 @@ function setTab(t) {
   const code    = document.getElementById('codePane');
   const btns    = document.querySelectorAll('.tab');
   if (t === 'preview') {
-    preview.hidden = false;
-    code.hidden    = true;
-    btns[0].className = 'tab active';
-    btns[1].className = 'tab inactive';
+    preview.hidden = false; code.hidden = true;
+    btns[0].className = 'tab active'; btns[1].className = 'tab inactive';
   } else {
-    preview.hidden = true;
-    code.hidden    = false;
-    btns[0].className = 'tab inactive';
-    btns[1].className = 'tab active';
+    preview.hidden = true; code.hidden = false;
+    btns[0].className = 'tab inactive'; btns[1].className = 'tab active';
   }
 }
+
+/* ── headline slider ── */
+const SLIDES = [
+  { a: 'Build',  b: 'faster'       },
+  { a: 'Deploy', b: 'smarter'      },
+  { a: 'Ship',   b: 'confidently'  },
+];
+let slideIdx = 0;
+function nextSlide() {
+  slideIdx = (slideIdx + 1) % SLIDES.length;
+  const wrap = document.getElementById('slideWrap');
+  const s    = SLIDES[slideIdx];
+  wrap.innerHTML = `<div class="crane-slide" style="animation:slide-in .6s cubic-bezier(.2,.8,.2,1) both">${s.a} <em>${s.b}</em></div>`;
+  const dots = document.getElementById('craneDots').children;
+  for (let i = 0; i < dots.length; i++) {
+    dots[i].style.width      = i === slideIdx ? '28px' : '8px';
+    dots[i].style.background = i === slideIdx ? 'var(--gold)' : 'rgba(255,255,255,.2)';
+  }
+}
+setInterval(nextSlide, 3200);
 
 /* ── mic toggle ── */
 let micOn = false;
 function toggleMic() {
   micOn = !micOn;
-  const micBtn      = document.getElementById('micBtn');
-  const agentMicBtn = document.getElementById('agentMicBtn');
-  const composer    = document.getElementById('composer');
-  if (micOn) {
-    micBtn.style.background      = '#eeca50';
-    micBtn.style.color           = '#1a1204';
-    micBtn.style.borderColor     = 'rgba(255,236,170,.6)';
-    agentMicBtn.style.background = '#eeca50';
-    agentMicBtn.style.color      = '#1a1204';
-    agentMicBtn.style.borderColor= 'rgba(255,236,170,.6)';
-    composer.style.borderColor   = 'rgba(238,202,80,.5)';
-  } else {
-    micBtn.style.background      = '';
-    micBtn.style.color           = '';
-    micBtn.style.borderColor     = '';
-    agentMicBtn.style.background = '';
-    agentMicBtn.style.color      = '';
-    agentMicBtn.style.borderColor= '';
-    composer.style.borderColor   = '';
-  }
+  const m = document.getElementById('micBtn');
+  const a = document.getElementById('agentMicBtn');
+  const c = document.getElementById('composer');
+  const on  = { background: '#eeca50', color: '#1a1204', borderColor: 'rgba(255,236,170,.6)' };
+  const off = { background: '',        color: '',         borderColor: '' };
+  const v = micOn ? on : off;
+  Object.assign(m.style, v); Object.assign(a.style, v);
+  c.style.borderColor = micOn ? 'rgba(238,202,80,.5)' : '';
 }
 
 /* ── send message ── */
 function sendMsg() {
   const input = document.getElementById('draftInput');
-  const text  = input.value.trim() || (micOn ? 'Add a team section.' : '');
+  const text  = input.value.trim() || (micOn ? 'Add the contact section.' : '');
   if (!text) return;
   const via = micOn ? 'VOICE' : 'TEXT';
   addMsg(text, 'me', via);
   input.value = '';
   if (micOn) toggleMic();
-  setTimeout(() => {
-    addMsg('Got it — building that now. Watch the preview.', 'bot', '', [['●','Editing src/App.tsx','var(--gold)']]);
-  }, 700);
+  setTimeout(() => addMsg(
+    'Got it — building that now. Watch the preview.',
+    'bot', '',
+    [['●','Editing src/App.tsx','var(--gold)']]
+  ), 700);
 }
-
-function addMsg(text, who, via, steps) {
-  const feed  = document.getElementById('messages');
-  const div   = document.createElement('div');
-  div.className = 'msg ' + who;
-  const meta = `<div class="msg-meta"><span>${who === 'me' ? 'YOU' : 'BERYL'}</span>${via ? `<span>· ${via}</span>` : ''}</div>`;
-  const bubble = `<div class="msg-bubble">${text}</div>`;
-  let stepsHtml = '';
-  if (steps && steps.length) {
-    stepsHtml = `<div class="msg-steps">${steps.map(s=>`<div class="step"><span style="color:${s[2]}">${s[0]}</span><span style="color:${s[2]}">${s[1]}</span></div>`).join('')}</div>`;
-  }
-  div.innerHTML = meta + bubble + stepsHtml;
-  feed.appendChild(div);
-  feed.scrollTop = feed.scrollHeight;
-}
-
-/* ── enter to send ── */
 document.getElementById('draftInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
 });
 
-/* ── live tok/s counter ── */
+function addMsg(text, who, via, steps) {
+  const feed = document.getElementById('messages');
+  const div  = document.createElement('div');
+  div.className = 'msg ' + who;
+  let html = `<div class="msg-meta"><span>${who === 'me' ? 'YOU' : 'BERYL'}</span>${via ? `<span>· ${via}</span>` : ''}</div>`;
+  html += `<div class="msg-bubble">${text}</div>`;
+  if (steps?.length) {
+    html += `<div class="msg-steps">${steps.map(s=>`<div class="step"><span style="color:${s[2]}">${s[0]}</span><span style="color:${s[2]}">${s[1]}</span></div>`).join('')}</div>`;
+  }
+  div.innerHTML = html;
+  feed.appendChild(div);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+/* ── live tok/s ── */
 let tps = 94;
 setInterval(() => {
   tps = Math.max(62, Math.min(110, tps + (Math.random() - .45) * 8));
