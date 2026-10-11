@@ -462,14 +462,7 @@ function Msg({ who, via, text, steps }) {
   );
 }
 
-const INITIAL_MSGS = [
-  { who:'me', via:'VOICE', text:'Build me the Crane IT landing page — dark, cinematic, that gold chrome C logo, and put Beryl front and center with the crane imagery.' },
-  { who:'bot', via:'', text:'On it — pulling your uploads now. Scaffolding the hero with the crane scene, gold chrome branding, and that animated headline stack.',
-    steps:[['✓','Loaded uploads/hero-bg.jpeg','#a1a1aa'],['✓','Created src/App.tsx + hero section','#a1a1aa'],['●','Rendering preview…','var(--gold)']] },
-  { who:'me', via:'TEXT', text:'Add the services section and the stats strip. Keep the gold accents consistent.' },
-  { who:'bot', via:'', text:'Done. Stats strip (builds, deploys, models, uptime), four service cards below. The gold gradient is pulled from your design token — consistent all the way down.',
-    steps:[['✓','Added <StatsStrip />','#a1a1aa'],['✓','Added <Services /> (4 cards)','#a1a1aa'],['✓','Live — localhost:5173','#34d399']] },
-];
+const INITIAL_MSGS = [];
 
 function CodePane() {
   const K = ({c}) => <span className="token-keyword">{c}</span>;
