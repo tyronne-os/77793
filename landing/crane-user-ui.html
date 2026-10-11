@@ -1,0 +1,1126 @@
+<title>Crane Builder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap">
+<style>
+/* ── single dark-first design — IDE surface, no theme toggling ── */
+:root {
+  --bg:         #09090b;
+  --surface:    #111113;
+  --surface2:   #18181b;
+  --border:     rgba(255,255,255,.08);
+  --border-mid: rgba(255,255,255,.12);
+  --fg:         #fafafa;
+  --fg-2:       #e4e4e7;
+  --fg-3:       #d4d4d8;
+  --fg-4:       #a1a1aa;
+  --fg-5:       #71717a;
+  --gold:       #eeca50;
+  --gold-dim:   #c6a23a;
+  --gold-dark:  #6c4a08;
+  --gold-grad:  linear-gradient(138deg,#6c4a08 0%,#c6a23a 24%,#eeca50 50%,#c6a23a 76%,#6c4a08 100%);
+  --gold-chrome:linear-gradient(115deg,#5a3d05 0%,#c6a23a 18%,#fff6cf 30%,#eeca50 42%,#8a6410 56%,#f5d775 70%,#b88a22 88%,#5a3d05 100%);
+  --green:      #34d399;
+  --red:        #dc2626;
+  --radius-sm:  8px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --radius-xl:  18px;
+  --font-sans:  'Geist', system-ui, sans-serif;
+  --font-mono:  'Geist Mono', ui-monospace, monospace;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--fg); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
+a { color: var(--gold); text-decoration: none; }
+a:hover { color: #fff3c2; }
+button { cursor: pointer; font-family: var(--font-sans); }
+textarea { font-family: var(--font-sans); }
+textarea::placeholder { color: var(--fg-5); }
+
+@keyframes wave    { 0%,100%{transform:scaleY(.25)} 50%{transform:scaleY(1)} }
+@keyframes chrome  { 0%,100%{background-position:0% 0} 50%{background-position:100% 0} }
+@keyframes ring    { 0%{transform:scale(1);opacity:.55} 100%{transform:scale(1.18);opacity:0} }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── layout shell ── */
+.app {
+  height: 100%;
+  display: grid;
+  grid-template-rows: 56px minmax(0,1fr);
+}
+
+/* ── header ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  min-width: 0;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.logo {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.logo-c {
+  font-family: Georgia, serif;
+  font-size: 38px;
+  line-height: .78;
+  font-weight: 700;
+  background: var(--gold-chrome);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: chrome 5s ease-in-out infinite;
+}
+.logo-rane {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .22em;
+  color: var(--fg);
+  padding-bottom: 2px;
+}
+.logo-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .3em;
+  color: var(--gold);
+  padding-bottom: 3px;
+  margin-left: 4px;
+}
+
+.divider-v { width: 1px; height: 22px; background: var(--border-mid); flex-shrink: 0; }
+
+.btn-project {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border-mid);
+  color: var(--fg-2);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.btn-project:hover { background: var(--surface2); }
+
+.btn-new {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: 1px solid var(--border-mid);
+  color: var(--fg-3);
+  font-size: 13px;
+  font-weight: 500;
+}
+.btn-new:hover { background: var(--surface); }
+
+.header-spacer { flex: 1; }
+
+.tab-group {
+  display: flex;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tab {
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 7px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  transition: background .15s, color .15s;
+}
+.tab.active {
+  background: var(--gold-grad);
+  color: #1a1204;
+}
+.tab.inactive {
+  background: transparent;
+  color: var(--fg-4);
+}
+.tab.inactive:hover { color: var(--fg-2); }
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-mid);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.btn-ship {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,236,170,.5);
+  background: var(--gold-grad);
+  color: #1a1204;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  transition: transform .12s;
+  flex-shrink: 0;
+}
+.btn-ship:hover  { transform: scale(1.03); }
+.btn-ship:active { transform: scale(.96); }
+
+/* ── body grid ── */
+.body-grid {
+  display: grid;
+  grid-template-columns: clamp(260px,24vw,400px) minmax(0,1fr) clamp(220px,22vw,380px);
+  min-height: 0;
+}
+
+/* ── left sidebar — chat ── */
+.chat-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--border);
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.messages::-webkit-scrollbar { width: 4px; }
+.messages::-webkit-scrollbar-track { background: transparent; }
+.messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
+
+.msg { display: flex; flex-direction: column; gap: 6px; }
+.msg.me  { align-items: flex-end; }
+.msg.bot { align-items: flex-start; }
+
+.msg-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  color: var(--fg-5);
+}
+
+.msg-bubble {
+  max-width: 92%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--fg-2);
+  text-wrap: pretty;
+}
+.msg.me  .msg-bubble { background: #1c1c1f; border: 1px solid var(--border-mid); }
+.msg.bot .msg-bubble { background: transparent; border: 1px solid transparent; }
+
+.msg-steps {
+  width: 92%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #0e0e10;
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.step { display: flex; align-items: center; gap: 8px; }
+
+/* ── composer ── */
+.composer-wrap { padding: 12px; }
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  border: 1px solid var(--border-mid);
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+  transition: border-color .2s;
+}
+.composer textarea {
+  width: 100%;
+  resize: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.composer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+.tool-btn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--fg-4);
+}
+.tool-btn:hover { background: #1c1c1f; color: var(--fg); }
+.model-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 8px;
+  margin-left: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.model-chip:hover { background: var(--surface2); }
+.composer-spacer { flex: 1; }
+.btn-mic {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--border-mid);
+  background: var(--surface2);
+  color: var(--fg-2);
+}
+.btn-mic:hover { border-color: rgba(255,255,255,.2); }
+.btn-mic:active { transform: scale(.94); }
+.btn-send {
+  width: 34px;
+  height: 34px;
+  margin-left: 6px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255,236,170,.5);
+  background: var(--gold-grad);
+  color: #1a1204;
+}
+.btn-send:hover  { filter: brightness(1.08); }
+.btn-send:active { transform: scale(.94); }
+
+/* ── main panel ── */
+.main-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #0c0c0e;
+  padding: 14px;
+  gap: 10px;
+}
+
+.url-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-4);
+  flex-shrink: 0;
+}
+.url-text {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.live-badge { color: var(--green); }
+
+.preview-frame {
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+/* hide when code tab active */
+.preview-pane { height: 100%; overflow-y: auto; background: #0d0a08; color: #f1e3d0; font-family: var(--font-sans); }
+.preview-pane::-webkit-scrollbar { width: 6px; }
+.preview-pane::-webkit-scrollbar-thumb { background: rgba(241,227,208,.15); border-radius: 4px; }
+
+.code-pane {
+  height: 100%;
+  overflow-y: auto;
+  margin: 0;
+  padding: 18px 20px;
+  background: #0a0a0c;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--fg-3);
+}
+.code-pane::-webkit-scrollbar { width: 6px; }
+.code-pane::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
+
+/* ── preview content (Aymani Hair Spa) ── */
+.spa-hero {
+  position: relative;
+  min-height: min(100%, 520px);
+  display: flex;
+  flex-direction: column;
+  background: #0d0a08;
+  overflow: hidden;
+}
+.spa-hero-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 120% 120% at 50% 60%, #3b2215 0%, #1a100a 45%, #0d0a08 100%);
+}
+.spa-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(13,10,8,.78) 0%, rgba(13,10,8,.25) 38%, rgba(13,10,8,.92) 100%);
+}
+.spa-nav {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: 20px clamp(16px,3vw,36px);
+}
+.spa-brand { display: flex; align-items: center; gap: 16px; }
+.spa-logo-mark {
+  width: 68px;
+  height: 68px;
+  border-radius: 34px 34px 8px 8px;
+  border: 1px solid #e9cf8a;
+  box-shadow: 0 0 0 4px rgba(13,10,8,.35), 0 0 0 5px rgba(233,207,138,.35), 0 8px 30px rgba(0,0,0,.5);
+  background: rgba(13,10,8,.45);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.spa-logo-letter {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 46px;
+  line-height: 1;
+  background: linear-gradient(135deg,#a8782f,#fff1c4 45%,#c29a45 60%,#a8782f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.spa-name-block { display: flex; flex-direction: column; gap: 7px; }
+.spa-name {
+  font-family: var(--font-serif);
+  font-size: clamp(28px,4vw,50px);
+  line-height: .9;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #f1e3d0 0%, #fff1c4 40%, #e9cf8a 70%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 10px rgba(0,0,0,.5));
+}
+.spa-sub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .5em;
+  color: #e9cf8a;
+  white-space: nowrap;
+}
+.spa-sub-rule { width: 22px; height: 1px; background: #e9cf8a; }
+.spa-nav-links { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 12px; letter-spacing: .06em; color: #e8d8c2; }
+.spa-book-btn {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid #e9cf8a;
+  background: rgba(13,10,8,.4);
+  font-size: 12px;
+  color: #f6e2a8;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.spa-hero-body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 40px clamp(16px,3vw,36px) 36px;
+}
+.spa-location { font-family: var(--font-mono); font-size: 10px; letter-spacing: .26em; color: #f2b8a8; }
+.spa-headline {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: clamp(32px,6vw,72px);
+  line-height: .95;
+  max-width: 660px;
+  text-wrap: balance;
+  color: #f1e3d0;
+}
+.spa-headline em { font-style: italic; color: #e9cf8a; }
+.spa-tagline { font-size: 14px; line-height: 1.6; color: #d9c6ae; max-width: 400px; }
+.spa-ctas { display: flex; flex-wrap: wrap; gap: 10px; }
+.spa-cta-primary {
+  padding: 13px 24px;
+  border-radius: 999px;
+  background: linear-gradient(138deg, #8a6420, #e9cf8a 50%, #8a6420);
+  color: #1a1204;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+.spa-cta-secondary {
+  padding: 13px 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(241,227,208,.4);
+  background: transparent;
+  color: #f1e3d0;
+  font-size: 13px;
+  cursor: pointer;
+}
+.spa-services {
+  padding: clamp(32px,6vw,64px) clamp(16px,3vw,36px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%,240px), 1fr));
+  gap: clamp(20px,4vw,48px);
+  background: #0d0a08;
+}
+.spa-section-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: .26em; color: #b88a5a; }
+.spa-section-heading { font-family: var(--font-serif); font-weight: 400; font-size: clamp(24px,3vw,40px); line-height: 1; text-wrap: balance; color: #f1e3d0; }
+.spa-section-heading em { font-style: italic; color: #e9cf8a; }
+.spa-menu-list { display: flex; flex-direction: column; }
+.spa-menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid rgba(241,227,208,.12);
+}
+.spa-item-name { font-family: var(--font-serif); font-size: 20px; color: #f1e3d0; }
+.spa-item-desc { font-size: 12px; line-height: 1.5; color: #a8937c; }
+.spa-item-price { font-family: var(--font-mono); font-size: 12px; color: #e9cf8a; white-space: nowrap; }
+.spa-rule { border-top: 1px solid rgba(241,227,208,.12); margin-top: 0; }
+.spa-booking-strip {
+  margin: 0 clamp(16px,3vw,36px) clamp(20px,4vw,36px);
+  padding: clamp(20px,4vw,40px);
+  border-radius: 20px;
+  border: 1px solid rgba(233,207,138,.35);
+  background: linear-gradient(135deg, rgba(184,122,75,.18), rgba(13,10,8,0));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.spa-booking-title { font-family: var(--font-serif); font-size: clamp(22px,3vw,34px); line-height: 1.05; color: #f1e3d0; }
+.spa-booking-title em { font-style: italic; color: #e9cf8a; }
+.spa-booking-hours { font-size: 13px; color: #c9b49c; margin-top: 6px; }
+.spa-booking-btn {
+  padding: 14px 28px;
+  border-radius: 999px;
+  background: linear-gradient(138deg, #8a6420, #e9cf8a 50%, #8a6420);
+  color: #1a1204;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.spa-footer {
+  padding: 20px clamp(16px,3vw,36px) 28px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  color: #7a6a58;
+  background: #0d0a08;
+}
+
+/* ── right sidebar — agent ── */
+.agent-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--border);
+  padding: 14px;
+  gap: 12px;
+}
+
+.agent-card {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.agent-card-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 100% 140% at 50% 80%, #1a0e06 0%, #0e0a04 50%, #111113 100%);
+}
+.agent-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(9,9,11,.92) 0%, rgba(9,9,11,0) 40%);
+}
+.live-badge-pill {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(9,9,11,.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-mid);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  color: var(--fg);
+}
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+.agent-info {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.agent-wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+}
+.wave-bar {
+  width: 3px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--fg);
+  opacity: .85;
+  transform-origin: center;
+}
+.agent-name { font-size: 18px; font-weight: 600; letter-spacing: -.01em; color: var(--fg); }
+.agent-role { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; color: var(--fg-4); }
+
+/* wave bars with varied timings */
+.wb1  { animation: wave 0.6s ease-in-out 0s      infinite; }
+.wb2  { animation: wave 0.7s ease-in-out -0.13s  infinite; }
+.wb3  { animation: wave 0.65s ease-in-out -0.26s infinite; }
+.wb4  { animation: wave 0.8s ease-in-out -0.39s  infinite; }
+.wb5  { animation: wave 0.62s ease-in-out -0.52s infinite; }
+.wb6  { animation: wave 0.75s ease-in-out -0.65s infinite; }
+.wb7  { animation: wave 0.68s ease-in-out -0.78s infinite; }
+.wb8  { animation: wave 0.7s ease-in-out -0.91s  infinite; }
+.wb9  { animation: wave 0.63s ease-in-out -1.04s infinite; }
+.wb10 { animation: wave 0.72s ease-in-out -1.17s infinite; }
+.wb11 { animation: wave 0.66s ease-in-out -1.30s infinite; }
+.wb12 { animation: wave 0.69s ease-in-out -1.43s infinite; }
+
+.caption-card {
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-3);
+  text-wrap: pretty;
+}
+.caption-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  color: var(--fg-5);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.agent-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.ctrl-btn {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--border-mid);
+  background: var(--surface2);
+  color: var(--fg-2);
+  transition: border-color .15s, background .15s;
+}
+.ctrl-btn:hover { background: #222224; border-color: rgba(255,255,255,.2); }
+.ctrl-btn.end {
+  border: none;
+  background: var(--red);
+  color: #fff;
+}
+.ctrl-btn.end:hover { background: #ef4444; }
+
+/* ── responsive collapse ── */
+@media (max-width: 1100px) {
+  .body-grid { grid-template-columns: clamp(260px,32vw,360px) minmax(0,1fr); }
+  .agent-sidebar { display: none; }
+  .status-pill { display: none; }
+}
+@media (max-width: 720px) {
+  .body-grid { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); }
+  .chat-sidebar { max-height: 44vh; }
+  .app { overflow: auto; height: auto; }
+  html, body { overflow: auto; }
+}
+</style>
+
+<div class="app">
+
+  <!-- ── header ── -->
+  <header class="header">
+    <a href="#" class="logo">
+      <span class="logo-c">C</span>
+      <span class="logo-rane">RANE</span>
+      <span class="logo-tag">BUILDER</span>
+    </a>
+
+    <div class="divider-v"></div>
+
+    <button class="btn-project">
+      aymani-hair-spa
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+
+    <button class="btn-new">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      New
+    </button>
+
+    <div class="header-spacer"></div>
+
+    <div class="tab-group">
+      <button class="tab active" onclick="setTab('preview')">PREVIEW</button>
+      <button class="tab inactive" onclick="setTab('code')">CODE</button>
+    </div>
+
+    <div class="status-pill">
+      <span class="status-dot"></span>
+      berylize-7b · CPU · <span id="tps">94</span> tok/s
+    </div>
+
+    <button class="btn-ship">SHIP</button>
+  </header>
+
+  <!-- ── body ── -->
+  <div class="body-grid">
+
+    <!-- ── left: chat ── -->
+    <aside class="chat-sidebar">
+      <div class="messages" id="messages">
+
+        <div class="msg me">
+          <div class="msg-meta"><span>YOU</span><span>· VOICE</span></div>
+          <div class="msg-bubble">Build a landing page for Aymani Hair Spa in Chalmette, LA. Dark marble, warm gold, luxurious.</div>
+        </div>
+
+        <div class="msg bot">
+          <div class="msg-meta"><span>BERYL</span></div>
+          <div class="msg-bubble">On it — dark marble palette, gold accents, serif headline, booking CTA. Scaffolding now.</div>
+          <div class="msg-steps">
+            <div class="step"><span style="color:#a1a1aa">✓</span><span style="color:#a1a1aa">Created src/App.tsx</span></div>
+            <div class="step"><span style="color:#a1a1aa">✓</span><span style="color:#a1a1aa">Added hero + nav</span></div>
+            <div class="step"><span style="color:var(--gold)">●</span><span style="color:var(--gold)">Running preview</span></div>
+          </div>
+        </div>
+
+        <div class="msg me">
+          <div class="msg-meta"><span>YOU</span><span>· VOICE</span></div>
+          <div class="msg-bubble">Show off the salon interior and add services.</div>
+        </div>
+
+        <div class="msg bot">
+          <div class="msg-meta"><span>BERYL</span></div>
+          <div class="msg-bubble">Done: hero with your salon photo, services &amp; pricing, the space gallery and booking. Want a team section next?</div>
+        </div>
+
+      </div>
+
+      <div class="composer-wrap">
+        <div class="composer" id="composer">
+          <textarea id="draftInput" rows="2" placeholder="Describe it, or tap the mic and just say it…"></textarea>
+          <div class="composer-row">
+            <!-- tool icons -->
+            <button class="tool-btn" title="Attach">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
+            </button>
+            <button class="tool-btn" title="Image">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 5 5M14 14l2-2 5 5"/></svg>
+            </button>
+            <button class="tool-btn" title="Link">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+            </button>
+            <button class="tool-btn" title="GitHub">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.1-1.3-.3-2.5-1-3.5.3-1.2.3-2.4 0-3.5 0 0-1 0-3 1.5-2.6-.5-5.4-.5-8 0C6 2 5 2 5 2c-.3 1.1-.3 2.3 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.4.5-.7 1-.9 1.6-.2.6-.2 1.3-.1 1.9v4M9 18c-4.5 2-5-2-7-2"/></svg>
+            </button>
+            <button class="tool-btn" title="Commands">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
+            </button>
+            <button class="model-chip">berylize-7b
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="composer-spacer"></div>
+            <button class="btn-mic" id="micBtn" title="Voice" onclick="toggleMic()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></svg>
+            </button>
+            <button class="btn-send" title="Send" onclick="sendMsg()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── main: preview ── -->
+    <main class="main-panel">
+      <div class="url-bar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg>
+        <span class="url-text">localhost:5173 / aymani-hair-spa</span>
+        <span class="live-badge">● live</span>
+      </div>
+
+      <div class="preview-frame">
+
+        <!-- PREVIEW TAB -->
+        <div class="preview-pane" id="previewPane">
+          <!-- hero -->
+          <div class="spa-hero">
+            <div class="spa-hero-bg"></div>
+            <div class="spa-hero-overlay"></div>
+            <nav class="spa-nav">
+              <div class="spa-brand">
+                <div class="spa-logo-mark">
+                  <span class="spa-logo-letter">A</span>
+                </div>
+                <div class="spa-name-block">
+                  <span class="spa-name">Aymani</span>
+                  <span class="spa-sub"><span class="spa-sub-rule"></span>HAIR SPA</span>
+                </div>
+              </div>
+              <div class="spa-nav-links">
+                <span>Services</span><span>The Space</span><span>Visit</span>
+              </div>
+              <button class="spa-book-btn">Book now</button>
+            </nav>
+            <div class="spa-hero-body">
+              <span class="spa-location">CHALMETTE, LOUISIANA</span>
+              <h2 class="spa-headline">Where hair becomes <em>ritual.</em></h2>
+              <p class="spa-tagline">Curl-first cuts, color and silk presses in Chalmette's newest hair spa — marble, warm light and nowhere to rush.</p>
+              <div class="spa-ctas">
+                <button class="spa-cta-primary">Book a chair</button>
+                <button class="spa-cta-secondary">Explore services</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- services -->
+          <div class="spa-services">
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <span class="spa-section-label">01 — SERVICES</span>
+              <h3 class="spa-section-heading">Crafted for <em>every texture.</em></h3>
+            </div>
+            <div class="spa-menu-list">
+              <div class="spa-menu-item">
+                <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                  <span class="spa-item-name">Silk press</span>
+                  <span class="spa-item-desc">Smooth, bouncy, heat-protected.</span>
+                </div>
+                <span class="spa-item-price">from $85</span>
+              </div>
+              <div class="spa-menu-item">
+                <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                  <span class="spa-item-name">Curl cut &amp; shape</span>
+                  <span class="spa-item-desc">Dry-cut to your natural pattern.</span>
+                </div>
+                <span class="spa-item-price">from $70</span>
+              </div>
+              <div class="spa-menu-item">
+                <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                  <span class="spa-item-name">Color &amp; gloss</span>
+                  <span class="spa-item-desc">Custom tones, root to tip.</span>
+                </div>
+                <span class="spa-item-price">from $120</span>
+              </div>
+              <div class="spa-menu-item">
+                <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                  <span class="spa-item-name">Scalp spa wash</span>
+                  <span class="spa-item-desc">Massage, steam and deep treatment.</span>
+                </div>
+                <span class="spa-item-price">from $55</span>
+              </div>
+              <div class="spa-rule"></div>
+            </div>
+          </div>
+
+          <!-- booking strip -->
+          <div class="spa-booking-strip">
+            <div>
+              <div class="spa-booking-title">Your chair is <em>waiting.</em></div>
+              <div class="spa-booking-hours">Tue–Sat · 9am–7pm · Chalmette, LA</div>
+            </div>
+            <button class="spa-booking-btn">Book your appointment</button>
+          </div>
+
+          <!-- footer -->
+          <div class="spa-footer">
+            <span>© 2026 AYMANI HAIR SPA</span>
+            <span>CHALMETTE, LA</span>
+          </div>
+        </div>
+
+        <!-- CODE TAB -->
+        <pre class="code-pane" id="codePane" hidden>export default function App() {
+  return (
+    &lt;main className="bg-ink"&gt;
+      &lt;Nav
+        brand="Aymani Hair Spa"
+        links={['Services', 'The Space', 'Visit']}
+      /&gt;
+      &lt;Hero
+        eyebrow="Chalmette, Louisiana"
+        title="Where hair becomes ritual."
+        primary="Book a chair"
+        secondary="Explore services"
+      /&gt;
+      &lt;Services
+        items={[
+          { name: 'Silk press',      desc: 'Smooth, bouncy, heat-protected.',      price: '$85' },
+          { name: 'Curl cut & shape',desc: 'Dry-cut to your natural pattern.',     price: '$70' },
+          { name: 'Color & gloss',   desc: 'Custom tones, root to tip.',           price: '$120' },
+          { name: 'Scalp spa wash',  desc: 'Massage, steam and deep treatment.',   price: '$55' },
+        ]}
+      /&gt;
+      &lt;Booking
+        hours="Tue–Sat · 9am–7pm"
+        location="Chalmette, LA"
+        cta="Book your appointment"
+      /&gt;
+    &lt;/main&gt;
+  );
+}</pre>
+
+      </div><!-- /preview-frame -->
+    </main>
+
+    <!-- ── right: agent ── -->
+    <aside class="agent-sidebar">
+      <div class="agent-card">
+        <div class="agent-card-bg"></div>
+        <div class="agent-card-overlay"></div>
+
+        <div class="live-badge-pill">
+          <span class="live-dot"></span>LIVE
+        </div>
+
+        <div class="agent-info">
+          <div class="agent-wave">
+            <span class="wave-bar wb1"></span>
+            <span class="wave-bar wb2"></span>
+            <span class="wave-bar wb3"></span>
+            <span class="wave-bar wb4"></span>
+            <span class="wave-bar wb5"></span>
+            <span class="wave-bar wb6"></span>
+            <span class="wave-bar wb7"></span>
+            <span class="wave-bar wb8"></span>
+            <span class="wave-bar wb9"></span>
+            <span class="wave-bar wb10"></span>
+            <span class="wave-bar wb11"></span>
+            <span class="wave-bar wb12"></span>
+          </div>
+          <div class="agent-name">Beryl</div>
+          <div class="agent-role">BUILD AGENT · BERYL LABS</div>
+        </div>
+      </div>
+
+      <div class="caption-card">
+        <span class="caption-label">SAYING</span>
+        "Hi Aymani. You can text me or click the mic and have a real-time live conversation — let's get it done, girl!"
+      </div>
+
+      <div class="agent-controls">
+        <button class="ctrl-btn" id="agentMicBtn" title="Mic" onclick="toggleMic()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></svg>
+        </button>
+        <button class="ctrl-btn" title="Camera">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
+        </button>
+        <button class="ctrl-btn" title="Share screen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </button>
+        <button class="ctrl-btn end" title="End">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </aside>
+
+  </div><!-- /body-grid -->
+</div><!-- /app -->
+
+<script>
+/* ── tab switching ── */
+function setTab(t) {
+  const preview = document.getElementById('previewPane');
+  const code    = document.getElementById('codePane');
+  const btns    = document.querySelectorAll('.tab');
+  if (t === 'preview') {
+    preview.hidden = false;
+    code.hidden    = true;
+    btns[0].className = 'tab active';
+    btns[1].className = 'tab inactive';
+  } else {
+    preview.hidden = true;
+    code.hidden    = false;
+    btns[0].className = 'tab inactive';
+    btns[1].className = 'tab active';
+  }
+}
+
+/* ── mic toggle ── */
+let micOn = false;
+function toggleMic() {
+  micOn = !micOn;
+  const micBtn      = document.getElementById('micBtn');
+  const agentMicBtn = document.getElementById('agentMicBtn');
+  const composer    = document.getElementById('composer');
+  if (micOn) {
+    micBtn.style.background      = '#eeca50';
+    micBtn.style.color           = '#1a1204';
+    micBtn.style.borderColor     = 'rgba(255,236,170,.6)';
+    agentMicBtn.style.background = '#eeca50';
+    agentMicBtn.style.color      = '#1a1204';
+    agentMicBtn.style.borderColor= 'rgba(255,236,170,.6)';
+    composer.style.borderColor   = 'rgba(238,202,80,.5)';
+  } else {
+    micBtn.style.background      = '';
+    micBtn.style.color           = '';
+    micBtn.style.borderColor     = '';
+    agentMicBtn.style.background = '';
+    agentMicBtn.style.color      = '';
+    agentMicBtn.style.borderColor= '';
+    composer.style.borderColor   = '';
+  }
+}
+
+/* ── send message ── */
+function sendMsg() {
+  const input = document.getElementById('draftInput');
+  const text  = input.value.trim() || (micOn ? 'Add a team section.' : '');
+  if (!text) return;
+  const via = micOn ? 'VOICE' : 'TEXT';
+  addMsg(text, 'me', via);
+  input.value = '';
+  if (micOn) toggleMic();
+  setTimeout(() => {
+    addMsg('Got it — building that now. Watch the preview.', 'bot', '', [['●','Editing src/App.tsx','var(--gold)']]);
+  }, 700);
+}
+
+function addMsg(text, who, via, steps) {
+  const feed  = document.getElementById('messages');
+  const div   = document.createElement('div');
+  div.className = 'msg ' + who;
+  const meta = `<div class="msg-meta"><span>${who === 'me' ? 'YOU' : 'BERYL'}</span>${via ? `<span>· ${via}</span>` : ''}</div>`;
+  const bubble = `<div class="msg-bubble">${text}</div>`;
+  let stepsHtml = '';
+  if (steps && steps.length) {
+    stepsHtml = `<div class="msg-steps">${steps.map(s=>`<div class="step"><span style="color:${s[2]}">${s[0]}</span><span style="color:${s[2]}">${s[1]}</span></div>`).join('')}</div>`;
+  }
+  div.innerHTML = meta + bubble + stepsHtml;
+  feed.appendChild(div);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+/* ── enter to send ── */
+document.getElementById('draftInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+});
+
+/* ── live tok/s counter ── */
+let tps = 94;
+setInterval(() => {
+  tps = Math.max(62, Math.min(110, tps + (Math.random() - .45) * 8));
+  const el = document.getElementById('tps');
+  if (el) el.textContent = tps.toFixed(0);
+}, 400);
+</script>
