@@ -1,0 +1,752 @@
+<title>Crane Builder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap">
+<style>
+/* ── single dark-first design — IDE surface ── */
+:root {
+  --bg:         #09090b;
+  --surface:    #111113;
+  --surface2:   #18181b;
+  --border:     rgba(255,255,255,.08);
+  --border-mid: rgba(255,255,255,.12);
+  --fg:         #fafafa;
+  --fg-2:       #e4e4e7;
+  --fg-3:       #d4d4d8;
+  --fg-4:       #a1a1aa;
+  --fg-5:       #71717a;
+  --gold:       #eeca50;
+  --gold-dim:   #c6a23a;
+  --gold-dark:  #6c4a08;
+  --gold-grad:  linear-gradient(138deg,#6c4a08 0%,#c6a23a 24%,#eeca50 50%,#c6a23a 76%,#6c4a08 100%);
+  --gold-chrome:linear-gradient(115deg,#5a3d05 0%,#c6a23a 18%,#fff6cf 30%,#eeca50 42%,#8a6410 56%,#f5d775 70%,#b88a22 88%,#5a3d05 100%);
+  --green:      #34d399;
+  --red:        #dc2626;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--fg); font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+a { color: var(--gold); text-decoration: none; }
+button { cursor: pointer; font-family: 'Geist', sans-serif; }
+textarea { font-family: 'Geist', sans-serif; }
+textarea::placeholder { color: var(--fg-5); }
+
+@keyframes wave    { 0%,100%{transform:scaleY(.25)} 50%{transform:scaleY(1)} }
+@keyframes chrome  { 0%,100%{background-position:0% 0} 50%{background-position:100% 0} }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
+@keyframes rise    { 0%{opacity:0;transform:translateY(16px)} 100%{opacity:1;transform:translateY(0)} }
+@keyframes glint   { 0%,30%{background-position:160% 0} 70%,100%{background-position:-60% 0} }
+@keyframes slide-in { from{transform:translateY(8px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+/* ── layout shell ── */
+.app { height: 100%; display: grid; grid-template-rows: 56px minmax(0,1fr); }
+
+/* ── header ── */
+.header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; min-width: 0; overflow: hidden;
+  border-bottom: 1px solid var(--border); background: var(--bg);
+}
+.logo { display: flex; align-items: flex-end; gap: 4px; text-decoration: none; flex-shrink: 0; }
+.logo-c {
+  font-family: Georgia, serif; font-size: 38px; line-height: .78; font-weight: 700;
+  background: var(--gold-chrome); background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: chrome 5s ease-in-out infinite;
+}
+.logo-rane  { font-size: 13px; font-weight: 700; letter-spacing: .22em; color: var(--fg); padding-bottom: 2px; }
+.logo-tag   { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .3em; color: var(--gold); padding-bottom: 3px; margin-left: 4px; }
+.divider-v  { width: 1px; height: 22px; background: var(--border-mid); flex-shrink: 0; }
+.btn-project {
+  display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+  border-radius: 10px; background: var(--surface); border: 1px solid var(--border-mid);
+  color: var(--fg-2); font-size: 13px; font-weight: 500; white-space: nowrap;
+}
+.btn-project:hover { background: var(--surface2); }
+.btn-new {
+  display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
+  border-radius: 10px; background: transparent; border: 1px solid var(--border-mid);
+  color: var(--fg-3); font-size: 13px; font-weight: 500;
+}
+.btn-new:hover { background: var(--surface); }
+.header-spacer { flex: 1; }
+.tab-group { display: flex; padding: 3px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); flex-shrink: 0; }
+.tab { height: 28px; padding: 0 14px; border-radius: 7px; border: none; font-size: 12px; font-weight: 600; letter-spacing: .06em; transition: background .15s, color .15s; }
+.tab.active  { background: var(--gold-grad); color: #1a1204; }
+.tab.inactive{ background: transparent; color: var(--fg-4); }
+.tab.inactive:hover { color: var(--fg-2); }
+.status-pill {
+  display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+  border-radius: 999px; border: 1px solid var(--border-mid);
+  font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--fg-3); white-space: nowrap; flex-shrink: 0;
+}
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse-dot 2s ease-in-out infinite; }
+.btn-ship {
+  height: 32px; padding: 0 14px; border-radius: 10px;
+  border: 1px solid rgba(255,236,170,.5); background: var(--gold-grad);
+  color: #1a1204; font-size: 12px; font-weight: 700; letter-spacing: .1em;
+  transition: transform .12s; flex-shrink: 0;
+}
+.btn-ship:hover  { transform: scale(1.03); }
+.btn-ship:active { transform: scale(.96); }
+
+/* ── body grid ── */
+.body-grid {
+  display: grid;
+  grid-template-columns: clamp(260px,24vw,400px) minmax(0,1fr) clamp(220px,22vw,380px);
+  min-height: 0;
+}
+
+/* ── left sidebar — chat ── */
+.chat-sidebar { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }
+.messages { flex: 1; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 18px; }
+.messages::-webkit-scrollbar { width: 4px; }
+.messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
+.msg { display: flex; flex-direction: column; gap: 6px; }
+.msg.me  { align-items: flex-end; }
+.msg.bot { align-items: flex-start; }
+.msg-meta { display: flex; align-items: center; gap: 6px; font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .12em; color: var(--fg-5); }
+.msg-bubble { max-width: 92%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.55; color: var(--fg-2); text-wrap: pretty; }
+.msg.me  .msg-bubble { background: #1c1c1f; border: 1px solid var(--border-mid); }
+.msg.bot .msg-bubble { background: transparent; border: 1px solid transparent; }
+.msg-steps { width: 92%; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: #0e0e10; border: 1px solid var(--border); font-family: 'Geist Mono', monospace; font-size: 12px; }
+.step { display: flex; align-items: center; gap: 8px; }
+
+/* ── composer ── */
+.composer-wrap { padding: 12px; }
+.composer { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border-mid); box-shadow: 0 10px 30px rgba(0,0,0,.4); transition: border-color .2s; }
+.composer textarea { width: 100%; resize: none; background: transparent; border: none; outline: none; color: var(--fg); font-size: 14px; line-height: 1.5; }
+.composer-row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+.tool-btn { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px; border: none; background: transparent; color: var(--fg-4); }
+.tool-btn:hover { background: #1c1c1f; color: var(--fg); }
+.model-chip { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px; margin-left: 4px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--fg-3); font-family: 'Geist Mono', monospace; font-size: 11px; }
+.model-chip:hover { background: var(--surface2); }
+.composer-spacer { flex: 1; }
+.btn-mic  { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border-mid); background: var(--surface2); color: var(--fg-2); transition: all .15s; }
+.btn-mic:active { transform: scale(.94); }
+.btn-send { width: 34px; height: 34px; margin-left: 6px; display: grid; place-items: center; border-radius: 50%; border: 1px solid rgba(255,236,170,.5); background: var(--gold-grad); color: #1a1204; }
+.btn-send:hover  { filter: brightness(1.08); }
+.btn-send:active { transform: scale(.94); }
+
+/* ── main panel ── */
+.main-panel { display: flex; flex-direction: column; min-height: 0; background: #0c0c0e; padding: 14px; gap: 10px; }
+.url-bar { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--fg-4); flex-shrink: 0; }
+.url-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live-badge { color: var(--green); }
+.preview-frame { flex: 1; min-height: 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); }
+
+/* ── idle empty state ── */
+.idle-state {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #0a0a0c;
+  color: var(--fg-5);
+  text-align: center;
+  padding: 24px;
+}
+.idle-icon {
+  width: 52px; height: 52px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: grid; place-items: center;
+  color: var(--fg-5);
+  margin-bottom: 4px;
+}
+.idle-title { font-size: 14px; font-weight: 600; color: var(--fg-4); letter-spacing: -.01em; }
+.idle-sub   { font-size: 12px; line-height: 1.6; color: var(--fg-5); max-width: 260px; }
+.idle-pulse {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,.15);
+  box-shadow: 16px 0 0 rgba(255,255,255,.1), -16px 0 0 rgba(255,255,255,.1);
+}
+
+/* ── Crane IT landing page preview ── */
+.crane-preview { height: 100%; overflow-y: auto; background: #09090b; font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.crane-preview::-webkit-scrollbar { width: 6px; }
+.crane-preview::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 4px; }
+
+.crane-hero {
+  position: relative;
+  width: 100%;
+  min-height: 520px;
+  overflow: hidden;
+  background: #09090b;
+  display: flex;
+  flex-direction: column;
+}
+.crane-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+}
+.crane-hero-overlay-top    { position: absolute; inset: 0 0 auto; height: 200px; background: linear-gradient(180deg, rgba(9,9,11,.88) 0%, rgba(9,9,11,0) 100%); pointer-events: none; }
+.crane-hero-overlay-bottom { position: absolute; inset: auto 0 0; height: 55%; background: linear-gradient(0deg, #09090b 0%, rgba(9,9,11,.88) 45%, rgba(9,9,11,0) 100%); pointer-events: none; }
+
+.crane-nav {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 20px clamp(14px,3vw,36px);
+  animation: rise .8s cubic-bezier(.2,.8,.2,1) .2s both;
+}
+.crane-logo { display: flex; align-items: flex-end; gap: 6px; justify-self: start; }
+.crane-logo-c {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(60px,8vw,110px);
+  line-height: .74;
+  font-weight: 700;
+  letter-spacing: -.04em;
+  background: var(--gold-chrome);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,.55)) drop-shadow(0 0 18px rgba(245,196,81,.25));
+  animation: chrome 5s ease-in-out infinite;
+}
+.crane-logo-text { display: flex; flex-direction: column; gap: 6px; padding-bottom: 4px; }
+.crane-logo-name { font-size: clamp(16px,2vw,26px); font-weight: 700; letter-spacing: .24em; color: #fafafa; line-height: 1; text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+.crane-logo-sub  { font-family: 'Geist Mono', monospace; font-size: clamp(10px,1vw,13px); font-weight: 600; letter-spacing: .4em; color: var(--gold); line-height: 1; }
+.crane-nav-links {
+  justify-self: center;
+  display: flex; align-items: center; gap: 2px;
+  padding: 5px;
+  border-radius: 999px;
+  background: rgba(24,24,27,.55);
+  border: 1px solid rgba(255,255,255,.1);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: 0 8px 30px rgba(0,0,0,.35);
+}
+.crane-nav-links a { padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 500; color: #d4d4d8; transition: background .15s, color .15s; }
+.crane-nav-links a.active { background: rgba(255,255,255,.1); color: #fafafa; }
+.crane-nav-links a:hover { color: #fafafa; }
+.crane-status-pill { justify-self: end; display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; background: rgba(24,24,27,.55); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: .06em; color: #d4d4d8; }
+.crane-status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse-dot 2s ease-in-out infinite; }
+
+.crane-hero-body {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 0 clamp(14px,3vw,36px) clamp(20px,5vh,40px);
+  text-align: center;
+}
+.crane-eyebrow { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .18em; color: #a1a1aa; animation: rise .8s cubic-bezier(.2,.8,.2,1) 1.2s both; }
+.crane-headline-row { display: flex; flex-direction: column; gap: 4px; min-height: 80px; }
+.crane-slide {
+  font-size: clamp(20px,2.8vw,44px);
+  font-weight: 600;
+  letter-spacing: -.04em;
+  color: #fafafa;
+  line-height: 1;
+  transition: opacity .7s, transform .7s;
+}
+.crane-slide em { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; color: #f5c451; }
+.crane-slide.hidden { opacity: 0; height: 0; overflow: hidden; }
+.crane-dots { display: flex; gap: 6px; justify-content: center; }
+.crane-dot { height: 3px; border-radius: 2px; transition: all .5s; }
+.crane-cta-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.crane-cta {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: clamp(14px,2vh,22px) clamp(32px,4vw,60px);
+  border-radius: 999px;
+  background: var(--gold-grad);
+  color: #1a1204;
+  font-size: clamp(14px,1.6vw,22px);
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,236,170,.6);
+  box-shadow: 0 14px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.5), inset 0 -2px 4px rgba(80,50,0,.35);
+  transition: filter .15s, transform .12s;
+}
+.crane-cta:hover  { filter: brightness(1.12); transform: scale(1.04); }
+.crane-cta:active { transform: scale(.97); }
+.crane-cta-sub { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .16em; color: #71717a; }
+
+/* ── stats strip ── */
+.crane-stats {
+  background: #09090b;
+  border-top: 1px solid rgba(255,255,255,.06);
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 0;
+  padding: 0;
+}
+.crane-stat {
+  padding: 20px 16px;
+  border-right: 1px solid rgba(255,255,255,.06);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  text-align: center;
+}
+.crane-stat:last-child { border-right: none; }
+.crane-stat-num { font-family: 'Geist Mono', monospace; font-size: clamp(20px,2.4vw,32px); font-weight: 700; color: var(--gold); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.crane-stat-label { font-size: 11px; color: var(--fg-5); letter-spacing: .06em; }
+
+/* ── services ── */
+.crane-services { padding: clamp(28px,5vw,56px) clamp(14px,3vw,36px); background: #09090b; }
+.crane-section-eyebrow { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .26em; color: var(--fg-5); margin-bottom: 12px; }
+.crane-section-heading { font-size: clamp(22px,2.8vw,38px); font-weight: 700; letter-spacing: -.03em; color: var(--fg); margin-bottom: clamp(20px,4vw,40px); line-height: 1.05; }
+.crane-section-heading em { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; color: var(--gold); }
+.crane-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,220px),1fr)); gap: 12px; }
+.crane-card {
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color .2s, background .2s;
+}
+.crane-card:hover { border-color: rgba(238,202,80,.25); background: #131315; }
+.crane-card-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(138deg, rgba(108,74,8,.6), rgba(198,162,58,.4));
+  border: 1px solid rgba(238,202,80,.25);
+  display: grid; place-items: center;
+  color: var(--gold);
+}
+.crane-card-title { font-size: 15px; font-weight: 600; color: var(--fg); }
+.crane-card-desc  { font-size: 13px; line-height: 1.55; color: var(--fg-4); }
+
+/* ── code pane ── */
+.code-pane { height: 100%; overflow-y: auto; margin: 0; padding: 18px 20px; background: #0a0a0c; font-family: 'Geist Mono', monospace; font-size: 13px; line-height: 1.7; color: var(--fg-3); }
+.code-pane::-webkit-scrollbar { width: 6px; }
+.code-pane::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
+.token-keyword  { color: #c084fc; }
+.token-fn       { color: #60a5fa; }
+.token-str      { color: #86efac; }
+.token-comment  { color: #52525b; font-style: italic; }
+.token-jsx      { color: #f9a8d4; }
+.token-prop     { color: var(--gold); }
+
+/* ── right sidebar — voice agent ── */
+.agent-sidebar { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--border); padding: 14px; gap: 10px; }
+
+/* photo card */
+.agent-card { position: relative; flex: 1; min-height: 0; border-radius: 20px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); }
+.agent-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+.agent-card-overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(9,9,11,.96) 0%, rgba(9,9,11,.3) 50%, rgba(9,9,11,0) 100%); }
+
+/* live badge */
+.live-badge-pill { position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: rgba(9,9,11,.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border-mid); font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .12em; color: var(--fg); z-index: 2; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: pulse-dot 2s ease-in-out infinite; }
+
+/* voice state overlaid on photo bottom */
+.voice-overlay {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 2;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.agent-name-row { display: flex; align-items: center; justify-content: space-between; }
+.agent-name { font-size: 17px; font-weight: 600; letter-spacing: -.01em; color: var(--fg); }
+.agent-role { font-family: 'Geist Mono', monospace; font-size: 9px; letter-spacing: .14em; color: rgba(255,255,255,.45); }
+
+/* oscilloscope waveform canvas */
+.voice-canvas-wrap {
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(9,9,11,.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.08);
+  padding: 8px 10px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.voice-canvas-label { display: flex; align-items: center; justify-content: space-between; }
+.voice-state-text { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .12em; color: var(--gold); }
+.voice-model-text { font-family: 'Geist Mono', monospace; font-size: 9px; letter-spacing: .08em; color: rgba(255,255,255,.3); }
+#voiceCanvas { width: 100%; height: 44px; display: block; border-radius: 4px; }
+
+/* call controls */
+.agent-controls { display: flex; justify-content: center; gap: 8px; }
+.ctrl-btn { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border-mid); background: rgba(24,24,27,.8); color: var(--fg-2); transition: all .15s; backdrop-filter: blur(8px); }
+.ctrl-btn:hover { background: #2a2a2e; border-color: rgba(255,255,255,.2); }
+.ctrl-btn.active-mic { background: rgba(238,202,80,.15); border-color: rgba(238,202,80,.5); color: var(--gold); }
+.ctrl-btn.end { border: none; background: rgba(220,38,38,.85); color: #fff; }
+.ctrl-btn.end:hover { background: #ef4444; }
+
+/* transcript strip */
+.transcript-strip {
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--fg-4);
+  min-height: 48px;
+  text-wrap: pretty;
+  font-style: italic;
+  position: relative;
+}
+.transcript-label { font-family: 'Geist Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--fg-5); display: block; margin-bottom: 3px; font-style: normal; }
+.transcript-cursor { display: inline-block; width: 2px; height: 11px; background: var(--gold); border-radius: 1px; margin-left: 2px; vertical-align: middle; animation: pulse-dot .8s ease-in-out infinite; }
+
+/* wave bars kept for possible use */
+.wb1 {animation:wave .60s ease-in-out 0s     infinite} .wb2 {animation:wave .70s ease-in-out -.13s infinite}
+.wb3 {animation:wave .65s ease-in-out -.26s infinite} .wb4 {animation:wave .80s ease-in-out -.39s infinite}
+.wb5 {animation:wave .62s ease-in-out -.52s infinite} .wb6 {animation:wave .75s ease-in-out -.65s infinite}
+.wb7 {animation:wave .68s ease-in-out -.78s infinite} .wb8 {animation:wave .70s ease-in-out -.91s infinite}
+.wb9 {animation:wave .63s ease-in-out -1.04s infinite} .wb10{animation:wave .72s ease-in-out -1.17s infinite}
+.wb11{animation:wave .66s ease-in-out -1.30s infinite} .wb12{animation:wave .69s ease-in-out -1.43s infinite}
+
+/* ── responsive ── */
+@media (max-width: 1100px) {
+  .body-grid { grid-template-columns: clamp(260px,32vw,360px) minmax(0,1fr); }
+  .agent-sidebar { display: none; }
+  .status-pill { display: none; }
+}
+@media (max-width: 720px) {
+  .body-grid { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr); }
+  .chat-sidebar { max-height: 44vh; }
+  .app { overflow: auto; height: auto; }
+  html, body { overflow: auto; }
+}
+#root { height: 100%; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+
+const MicIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></svg>);
+
+const LINES = [
+  '"Stats strip and services are live. Want me to wire up the contact form next, or should we move straight to deploy?"',
+  '"Pulling your design tokens now — gold gradient, Geist typefaces, zinc surface. Scaffolding."',
+  '"Hero looks clean. I added the slide animation on the headline. Want the dots smaller?"',
+  '"Done. Four service cards, consistent border radius, gold icon tint. Preview is live."',
+];
+const VOICE_LABELS = { listening:'LISTENING', muted:'MUTED', speaking:'SPEAKING', 'speaker-off':'SPEAKER OFF', idle:'IDLE' };
+
+function Msg({ who, via, text, steps }) {
+  return (
+    <div className={'msg ' + who}>
+      <div className="msg-meta"><span>{who === 'me' ? 'YOU' : 'BERYL'}</span>{via ? <span>· {via}</span> : null}</div>
+      <div className="msg-bubble">{text}</div>
+      {steps && steps.length ? (
+        <div className="msg-steps">
+          {steps.map((s, i) => (<div className="step" key={i}><span style={{color:s[2]}}>{s[0]}</span><span style={{color:s[2]}}>{s[1]}</span></div>))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const INITIAL_MSGS = [
+  { who:'me', via:'VOICE', text:'Build me the Crane IT landing page — dark, cinematic, that gold chrome C logo, and put Beryl front and center with the crane imagery.' },
+  { who:'bot', via:'', text:'On it — pulling your uploads now. Scaffolding the hero with the crane scene, gold chrome branding, and that animated headline stack.',
+    steps:[['✓','Loaded uploads/hero-bg.jpeg','#a1a1aa'],['✓','Created src/App.tsx + hero section','#a1a1aa'],['●','Rendering preview…','var(--gold)']] },
+  { who:'me', via:'TEXT', text:'Add the services section and the stats strip. Keep the gold accents consistent.' },
+  { who:'bot', via:'', text:'Done. Stats strip (builds, deploys, models, uptime), four service cards below. The gold gradient is pulled from your design token — consistent all the way down.',
+    steps:[['✓','Added <StatsStrip />','#a1a1aa'],['✓','Added <Services /> (4 cards)','#a1a1aa'],['✓','Live — localhost:5173','#34d399']] },
+];
+
+function CodePane() {
+  const K = ({c}) => <span className="token-keyword">{c}</span>;
+  const S = ({c}) => <span className="token-str">{c}</span>;
+  const P = ({c}) => <span className="token-prop">{c}</span>;
+  const J = ({c}) => <span className="token-jsx">{c}</span>;
+  return (
+<pre className="code-pane"><span className="token-comment">// src/App.tsx — crane-it landing page</span>{'\n'}
+<K c="import"/>{' { useState, useEffect } '}<K c="from"/> <S c="'react'"/>{'\n'}
+<K c="import"/>{' { Hero, StatsStrip, Services } '}<K c="from"/> <S c="'./components'"/>{'\n\n'}
+<K c="const"/> <P c="SLIDES"/>{' = [\n  { a: '}<S c="'Build'"/>{',  b: '}<S c="'faster'"/>{'  },\n  { a: '}<S c="'Deploy'"/>{', b: '}<S c="'smarter'"/>{' },\n  { a: '}<S c="'Ship'"/>{',   b: '}<S c="'confidently'"/>{' },\n]\n\n'}
+<K c="export default function"/> <span className="token-fn">App</span>{'() {\n  '}<K c="const"/>{' [slide, setSlide] = useState('}<S c="0"/>{')\n\n  useEffect(() => {\n    '}<K c="const"/>{' t = setInterval(\n      () => setSlide(s => (s + '}<S c="1"/>{') % SLIDES.length),\n      '}<S c="3200"/>{'\n    )\n    '}<K c="return"/>{' () => clearInterval(t)\n  }, [])\n\n  '}<K c="return"/>{' (\n    '}<J c="<main"/> <P c="className"/>=<S c='"bg-ink"'/><J c=">"/>{'\n      '}<J c="<Hero"/>{'\n        '}<P c="bgSrc"/>=<S c='"uploads/hero-bg.jpeg"'/>{'\n        '}<P c="slide"/>{'={SLIDES[slide]}\n        '}<P c="cta"/>=<S c='"Get shit done"'/>{'\n      '}<J c="/>"/>{'\n      '}<J c="<StatsStrip"/>{'\n        '}<P c="items"/>{'={[\n          { n: '}<S c="'12,847'"/>{', label: '}<S c="'Builds shipped'"/>{' },\n          { n: '}<S c="'98.7%'"/>{',  label: '}<S c="'Deploy success'"/>{' },\n          { n: '}<S c="'34'"/>{',     label: '}<S c="'Models supported'"/>{' },\n          { n: '}<S c="'99.9%'"/>{',  label: '}<S c="'Uptime SLA'"/>{' },\n        ]}\n      '}<J c="/>"/>{'\n      '}<J c="<Services />"/>{'\n    '}<J c="</main>"/>{'\n  )\n}'}</pre>
+  );
+}
+
+function VoiceCanvas({ voiceState }) {
+  const ref = useRef(null);
+  const st = useRef({ phase:0, ampTarget:0.7, amp:0.7, speakTimer:0 });
+  useEffect(() => {
+    const canvas = ref.current;
+    const resize = () => { canvas.width = canvas.offsetWidth * devicePixelRatio; canvas.height = canvas.offsetHeight * devicePixelRatio; };
+    window.addEventListener('resize', resize); resize();
+    return () => window.removeEventListener('resize', resize);
+  }, []);
+  useEffect(() => {
+    const canvas = ref.current, ctx2d = canvas.getContext('2d'), s = st.current;
+    let raf;
+    function drawWave() {
+      const W = canvas.width, H = canvas.height, midY = H / 2;
+      ctx2d.clearRect(0, 0, W, H);
+      if (voiceState === 'muted' || voiceState === 'idle') {
+        ctx2d.beginPath(); ctx2d.moveTo(0, midY); ctx2d.lineTo(W, midY);
+        ctx2d.strokeStyle = 'rgba(255,255,255,.15)'; ctx2d.lineWidth = 1.5; ctx2d.stroke();
+        return;
+      }
+      s.speakTimer++;
+      if (s.speakTimer % 80 === 0) s.ampTarget = 0.2 + Math.random() * 0.75;
+      s.amp += (s.ampTarget - s.amp) * 0.04;
+      if (voiceState === 'speaking') s.amp = Math.max(s.amp, 0.35);
+      const gold = voiceState === 'speaking' ? 'rgba(238,202,80,' : 'rgba(160,210,255,';
+      const points = 180;
+      s.phase += voiceState === 'speaking' ? 0.09 : 0.05;
+      ctx2d.beginPath();
+      for (let i = 0; i <= points; i++) {
+        const x = (i / points) * W;
+        const f1 = Math.sin(s.phase + i * 0.11) * s.amp;
+        const f2 = Math.sin(s.phase * 1.3 + i * 0.23) * s.amp * 0.4;
+        const f3 = Math.sin(s.phase * 0.7 + i * 0.38) * s.amp * 0.2;
+        const y = midY + (f1 + f2 + f3) * (H * 0.38);
+        i === 0 ? ctx2d.moveTo(x, y) : ctx2d.lineTo(x, y);
+      }
+      ctx2d.strokeStyle = gold + '0.9)'; ctx2d.lineWidth = 1.5 * devicePixelRatio;
+      ctx2d.shadowColor = gold + '0.5)'; ctx2d.shadowBlur = 6; ctx2d.stroke(); ctx2d.shadowBlur = 0;
+      raf = requestAnimationFrame(drawWave);
+    }
+    drawWave();
+    return () => cancelAnimationFrame(raf);
+  }, [voiceState]);
+  return <canvas ref={ref} id="voiceCanvas" height="44"></canvas>;
+}
+
+function Transcript({ cursorHidden }) {
+  const [text, setText] = useState(LINES[0]);
+  useEffect(() => {
+    let lineIdx = 0, charIdx = 0, timer, alive = true;
+    function typeNext() {
+      if (!alive) return;
+      const line = LINES[lineIdx];
+      if (charIdx < line.length) {
+        setText(line.slice(0, ++charIdx));
+        timer = setTimeout(typeNext, 18 + Math.random() * 22);
+      } else {
+        timer = setTimeout(() => { lineIdx = (lineIdx + 1) % LINES.length; charIdx = 0; setText(''); typeNext(); }, 5000);
+      }
+    }
+    timer = setTimeout(typeNext, 2000);
+    return () => { alive = false; clearTimeout(timer); };
+  }, []);
+  return (<><span id="transcriptText">{text}</span><span className="transcript-cursor" id="transcriptCursor" hidden={cursorHidden}></span></>);
+}
+
+function App() {
+  const [tab, setTab] = useState('preview');
+  const [micOn, setMicOn] = useState(true);
+  const [speakerOn, setSpeakerOn] = useState(true);
+  const [voiceState, setVoiceState] = useState('listening');
+  const [cursorHidden, setCursorHidden] = useState(false);
+  const [msgs, setMsgs] = useState(INITIAL_MSGS);
+  const [draft, setDraft] = useState('');
+  const [tps, setTps] = useState(94);
+  const feedRef = useRef(null);
+  const vsRef = useRef(voiceState); vsRef.current = voiceState;
+
+  useEffect(() => { const t = setInterval(() => setTps(v => Math.max(62, Math.min(110, v + (Math.random() - .45) * 8))), 400); return () => clearInterval(t); }, []);
+  useEffect(() => {
+    let n = 0;
+    const t = setInterval(() => {
+      const v = vsRef.current;
+      if (v === 'muted' || v === 'idle') return;
+      n++;
+      if (n % 14 === 0) setVoiceState(v === 'listening' ? 'speaking' : 'listening');
+    }, 500);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => { const f = feedRef.current; f.scrollTop = f.scrollHeight; }, [msgs]);
+
+  const toggleMic = () => { const on = !micOn; setMicOn(on); setVoiceState(on ? 'listening' : 'muted'); };
+  const toggleSpeaker = () => { const on = !speakerOn; setSpeakerOn(on); setVoiceState(on ? (micOn ? 'listening' : 'muted') : 'speaker-off'); };
+  const endCall = () => { setMicOn(false); setSpeakerOn(true); setVoiceState('idle'); setCursorHidden(true); };
+
+  const addMsg = (text, who, via, steps) => setMsgs(m => m.concat({ text, who, via, steps }));
+  const sendMsg = () => {
+    const text = draft.trim() || (micOn ? 'Add the contact section.' : '');
+    if (!text) return;
+    addMsg(text, 'me', micOn ? 'VOICE' : 'TEXT');
+    setDraft('');
+    setTimeout(() => addMsg('Got it — building that now. Watch the preview.', 'bot', '', [['●','Editing src/App.tsx','var(--gold)']]), 700);
+  };
+
+  const micStyle = micOn ? { background:'#eeca50', color:'#1a1204', borderColor:'rgba(255,236,170,.6)' } : {};
+  const voiceLabelText = voiceState === 'idle' ? 'IDLE' : (VOICE_LABELS[voiceState] || voiceState.toUpperCase());
+  const voiceLabelStyle = voiceState === 'idle' ? {} : { color: voiceState === 'muted' ? 'var(--fg-5)' : 'var(--gold)' };
+
+  return (
+<div className="app">
+
+  <header className="header">
+    <a href="#" className="logo">
+      <span className="logo-c">C</span>
+      <span className="logo-rane">RANE</span>
+      <span className="logo-tag">BUILDER</span>
+    </a>
+    <div className="divider-v"></div>
+    <button className="btn-project">
+      crane-it
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <button className="btn-new">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+      New
+    </button>
+    <div className="header-spacer"></div>
+    <div className="tab-group">
+      <button className={tab === 'preview' ? 'tab active' : 'tab inactive'} onClick={() => setTab('preview')}>PREVIEW</button>
+      <button className={tab === 'code' ? 'tab active' : 'tab inactive'} onClick={() => setTab('code')}>CODE</button>
+    </div>
+    <div className="status-pill">
+      <span className="status-dot"></span>
+      berylize-7b · CPU · <span id="tps">{tps.toFixed(0)}</span> tok/s
+    </div>
+    <button className="btn-ship">SHIP</button>
+  </header>
+
+  <div className="body-grid">
+
+    <aside className="chat-sidebar">
+      <div className="messages" id="messages" ref={feedRef}>
+
+        <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'4px 2px',marginBottom:'2px'}}>
+          <div style={{flex:1,height:'1px',background:'var(--border)'}}></div>
+          <span style={{fontFamily:"'Geist Mono',monospace",fontSize:'9px',letterSpacing:'.14em',color:'var(--fg-5)',whiteSpace:'nowrap'}}>berylize-node · us-east1-c · L4 GPU</span>
+          <div style={{flex:1,height:'1px',background:'var(--border)'}}></div>
+        </div>
+
+        {msgs.map((m, i) => <Msg key={i} {...m} />)}
+
+      </div>
+
+      <div className="composer-wrap">
+        <div className="composer" id="composer" style={micOn ? {borderColor:'rgba(238,202,80,.5)'} : {}}>
+          <textarea id="draftInput" rows="2" placeholder="Describe it, or tap the mic and just say it…" value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } }}></textarea>
+          <div className="composer-row">
+            <button className="tool-btn" title="Attach">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>
+            </button>
+            <button className="tool-btn" title="Image">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 5 5M14 14l2-2 5 5"/></svg>
+            </button>
+            <button className="tool-btn" title="Link">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+            </button>
+            <button className="tool-btn" title="GitHub">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.1-1.3-.3-2.5-1-3.5.3-1.2.3-2.4 0-3.5 0 0-1 0-3 1.5-2.6-.5-5.4-.5-8 0C6 2 5 2 5 2c-.3 1.1-.3 2.3 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.4.5-.7 1-.9 1.6-.2.6-.2 1.3-.1 1.9v4M9 18c-4.5 2-5-2-7-2"/></svg>
+            </button>
+            <button className="tool-btn" title="Commands">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
+            </button>
+            <button className="model-chip">berylize-7b
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div className="composer-spacer"></div>
+            <button className="btn-mic" id="micBtn" title="Voice" onClick={toggleMic} style={micStyle}>
+              <MicIcon />
+            </button>
+            <button className="btn-send" title="Send" onClick={sendMsg}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main className="main-panel">
+      <div className="url-bar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg>
+        <span className="url-text">localhost:5173 / crane-it</span>
+        <span className="live-badge">● live</span>
+      </div>
+
+      <div className="preview-frame">
+        {tab === 'preview' ? (
+          <div className="idle-state" id="idlePane">
+            <div className="idle-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            </div>
+            <div className="idle-title">No active build</div>
+            <div className="idle-sub">Describe your project in the chat or tap the mic. The preview will appear here as Beryl builds it.</div>
+            <div className="idle-pulse"></div>
+          </div>
+        ) : <CodePane />}
+      </div>
+    </main>
+
+    <aside className="agent-sidebar">
+
+      <div className="agent-card">
+        <img src="uploads/beryl.jpeg" alt="Beryl — Voice Agent" />
+        <div className="agent-card-overlay"></div>
+
+        <div className="live-badge-pill">
+          <span className="live-dot"></span>VOICE · LIVE
+        </div>
+
+        <div className="voice-overlay">
+          <div className="agent-name-row">
+            <div>
+              <div className="agent-name">Beryl</div>
+              <div className="agent-role">BUILD AGENT · BERYL LABS</div>
+            </div>
+          </div>
+
+          <div className="voice-canvas-wrap">
+            <div className="voice-canvas-label">
+              <span className="voice-state-text" id="voiceStateLabel" style={voiceLabelStyle}>{voiceLabelText}</span>
+              <span className="voice-model-text">berylize-7b · us-east1-c</span>
+            </div>
+            <VoiceCanvas voiceState={voiceState} />
+          </div>
+
+          <div className="agent-controls">
+            <button className={micOn ? 'ctrl-btn active-mic' : 'ctrl-btn'} id="agentMicBtn" title="Mic" onClick={toggleMic}>
+              <MicIcon />
+            </button>
+            <button className={speakerOn ? 'ctrl-btn' : 'ctrl-btn active-mic'} title="Mute speaker" id="speakerBtn" onClick={toggleSpeaker}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            </button>
+            <button className="ctrl-btn" title="Share screen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            </button>
+            <button className="ctrl-btn end" title="End call" onClick={endCall}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="transcript-strip">
+        <span className="transcript-label">TRANSCRIPT</span>
+        <Transcript cursorHidden={cursorHidden} />
+      </div>
+
+    </aside>
+
+  </div>
+</div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
