@@ -459,17 +459,7 @@ function Msg({ who, via, text, steps }) {
 const INITIAL_MSGS = [];
 
 function CodePane() {
-  const K = ({c}) => <span className="token-keyword">{c}</span>;
-  const S = ({c}) => <span className="token-str">{c}</span>;
-  const P = ({c}) => <span className="token-prop">{c}</span>;
-  const J = ({c}) => <span className="token-jsx">{c}</span>;
-  return (
-<pre className="code-pane"><span className="token-comment">// src/App.tsx — crane-it landing page</span>{'\n'}
-<K c="import"/>{' { useState, useEffect } '}<K c="from"/> <S c="'react'"/>{'\n'}
-<K c="import"/>{' { Hero, StatsStrip, Services } '}<K c="from"/> <S c="'./components'"/>{'\n\n'}
-<K c="const"/> <P c="SLIDES"/>{' = [\n  { a: '}<S c="'Build'"/>{',  b: '}<S c="'faster'"/>{'  },\n  { a: '}<S c="'Deploy'"/>{', b: '}<S c="'smarter'"/>{' },\n  { a: '}<S c="'Ship'"/>{',   b: '}<S c="'confidently'"/>{' },\n]\n\n'}
-<K c="export default function"/> <span className="token-fn">App</span>{'() {\n  '}<K c="const"/>{' [slide, setSlide] = useState('}<S c="0"/>{')\n\n  useEffect(() => {\n    '}<K c="const"/>{' t = setInterval(\n      () => setSlide(s => (s + '}<S c="1"/>{') % SLIDES.length),\n      '}<S c="3200"/>{'\n    )\n    '}<K c="return"/>{' () => clearInterval(t)\n  }, [])\n\n  '}<K c="return"/>{' (\n    '}<J c="<main"/> <P c="className"/>=<S c='"bg-ink"'/><J c=">"/>{'\n      '}<J c="<Hero"/>{'\n        '}<P c="bgSrc"/>=<S c='"uploads/hero-bg.jpeg"'/>{'\n        '}<P c="slide"/>{'={SLIDES[slide]}\n        '}<P c="cta"/>=<S c='"Get shit done"'/>{'\n      '}<J c="/>"/>{'\n      '}<J c="<StatsStrip"/>{'\n        '}<P c="items"/>{'={[\n          { n: '}<S c="'12,847'"/>{', label: '}<S c="'Builds shipped'"/>{' },\n          { n: '}<S c="'98.7%'"/>{',  label: '}<S c="'Deploy success'"/>{' },\n          { n: '}<S c="'34'"/>{',     label: '}<S c="'Models supported'"/>{' },\n          { n: '}<S c="'99.9%'"/>{',  label: '}<S c="'Uptime SLA'"/>{' },\n        ]}\n      '}<J c="/>"/>{'\n      '}<J c="<Services />"/>{'\n    '}<J c="</main>"/>{'\n  )\n}'}</pre>
-  );
+  return <pre className="code-pane"></pre>;
 }
 
 function VoiceCanvas() {
@@ -499,10 +489,8 @@ function App() {
   const [voiceState, setVoiceState] = useState('idle');
   const [msgs, setMsgs] = useState(INITIAL_MSGS);
   const [draft, setDraft] = useState('');
-  const [tps, setTps] = useState(94);
   const feedRef = useRef(null);
 
-  useEffect(() => { const t = setInterval(() => setTps(v => Math.max(62, Math.min(110, v + (Math.random() - .45) * 8))), 400); return () => clearInterval(t); }, []);
   useEffect(() => { const f = feedRef.current; f.scrollTop = f.scrollHeight; }, [msgs]);
 
   const toggleMic = () => { const on = !micOn; setMicOn(on); setVoiceState(on ? 'listening' : 'muted'); };
@@ -511,11 +499,10 @@ function App() {
 
   const addMsg = (text, who, via, steps) => setMsgs(m => m.concat({ text, who, via, steps }));
   const sendMsg = () => {
-    const text = draft.trim() || (micOn ? 'Add the contact section.' : '');
+    const text = draft.trim();
     if (!text) return;
     addMsg(text, 'me', micOn ? 'VOICE' : 'TEXT');
     setDraft('');
-    setTimeout(() => addMsg('Got it — building that now. Watch the preview.', 'bot', '', [['●','Editing src/App.tsx','var(--gold)']]), 700);
   };
 
   const micStyle = micOn ? { background:'#eeca50', color:'#1a1204', borderColor:'rgba(255,236,170,.6)' } : {};
@@ -547,7 +534,7 @@ function App() {
     </div>
     <div className="status-pill">
       <span className="status-dot"></span>
-      berylize-7b · CPU · <span id="tps">{tps.toFixed(0)}</span> tok/s
+      berylize-7b · CPU
     </div>
     <button className="btn-ship">SHIP</button>
   </header>
