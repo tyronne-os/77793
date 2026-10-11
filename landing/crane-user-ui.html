@@ -134,6 +134,36 @@ textarea::placeholder { color: var(--fg-5); }
 .live-badge { color: var(--green); }
 .preview-frame { flex: 1; min-height: 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); }
 
+/* ── idle empty state ── */
+.idle-state {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #0a0a0c;
+  color: var(--fg-5);
+  text-align: center;
+  padding: 24px;
+}
+.idle-icon {
+  width: 52px; height: 52px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: grid; place-items: center;
+  color: var(--fg-5);
+  margin-bottom: 4px;
+}
+.idle-title { font-size: 14px; font-weight: 600; color: var(--fg-4); letter-spacing: -.01em; }
+.idle-sub   { font-size: 12px; line-height: 1.6; color: var(--fg-5); max-width: 260px; }
+.idle-pulse {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,.15);
+  box-shadow: 16px 0 0 rgba(255,255,255,.1), -16px 0 0 rgba(255,255,255,.1);
+}
+
 /* ── Crane IT landing page preview ── */
 .crane-preview { height: 100%; overflow-y: auto; background: #09090b; font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
 .crane-preview::-webkit-scrollbar { width: 6px; }
@@ -309,32 +339,82 @@ textarea::placeholder { color: var(--fg-5); }
 .token-jsx      { color: #f9a8d4; }
 .token-prop     { color: var(--gold); }
 
-/* ── right sidebar — agent ── */
-.agent-sidebar { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--border); padding: 14px; gap: 12px; }
+/* ── right sidebar — voice agent ── */
+.agent-sidebar { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--border); padding: 14px; gap: 10px; }
+
+/* photo card */
 .agent-card { position: relative; flex: 1; min-height: 0; border-radius: 20px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); }
 .agent-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
-.agent-card-overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(9,9,11,.92) 0%, rgba(9,9,11,0) 45%); }
-.live-badge-pill { position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: rgba(9,9,11,.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border-mid); font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .12em; color: var(--fg); }
+.agent-card-overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(9,9,11,.96) 0%, rgba(9,9,11,.3) 50%, rgba(9,9,11,0) 100%); }
+
+/* live badge */
+.live-badge-pill { position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: rgba(9,9,11,.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border-mid); font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .12em; color: var(--fg); z-index: 2; }
 .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: pulse-dot 2s ease-in-out infinite; }
-.agent-info { position: absolute; left: 16px; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
-.agent-wave { display: flex; align-items: center; gap: 3px; height: 18px; }
-.wave-bar { width: 3px; height: 18px; border-radius: 2px; background: var(--fg); opacity: .85; transform-origin: center; }
-.agent-name { font-size: 18px; font-weight: 600; letter-spacing: -.01em; color: var(--fg); }
-.agent-role { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .14em; color: var(--fg-4); }
+
+/* voice state overlaid on photo bottom */
+.voice-overlay {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 2;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.agent-name-row { display: flex; align-items: center; justify-content: space-between; }
+.agent-name { font-size: 17px; font-weight: 600; letter-spacing: -.01em; color: var(--fg); }
+.agent-role { font-family: 'Geist Mono', monospace; font-size: 9px; letter-spacing: .14em; color: rgba(255,255,255,.45); }
+
+/* oscilloscope waveform canvas */
+.voice-canvas-wrap {
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(9,9,11,.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.08);
+  padding: 8px 10px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.voice-canvas-label { display: flex; align-items: center; justify-content: space-between; }
+.voice-state-text { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .12em; color: var(--gold); }
+.voice-model-text { font-family: 'Geist Mono', monospace; font-size: 9px; letter-spacing: .08em; color: rgba(255,255,255,.3); }
+#voiceCanvas { width: 100%; height: 44px; display: block; border-radius: 4px; }
+
+/* call controls */
+.agent-controls { display: flex; justify-content: center; gap: 8px; }
+.ctrl-btn { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border-mid); background: rgba(24,24,27,.8); color: var(--fg-2); transition: all .15s; backdrop-filter: blur(8px); }
+.ctrl-btn:hover { background: #2a2a2e; border-color: rgba(255,255,255,.2); }
+.ctrl-btn.active-mic { background: rgba(238,202,80,.15); border-color: rgba(238,202,80,.5); color: var(--gold); }
+.ctrl-btn.end { border: none; background: rgba(220,38,38,.85); color: #fff; }
+.ctrl-btn.end:hover { background: #ef4444; }
+
+/* transcript strip */
+.transcript-strip {
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--fg-4);
+  min-height: 48px;
+  text-wrap: pretty;
+  font-style: italic;
+  position: relative;
+}
+.transcript-label { font-family: 'Geist Mono', monospace; font-size: 9px; letter-spacing: .14em; color: var(--fg-5); display: block; margin-bottom: 3px; font-style: normal; }
+.transcript-cursor { display: inline-block; width: 2px; height: 11px; background: var(--gold); border-radius: 1px; margin-left: 2px; vertical-align: middle; animation: pulse-dot .8s ease-in-out infinite; }
+
+/* wave bars kept for possible use */
 .wb1 {animation:wave .60s ease-in-out 0s     infinite} .wb2 {animation:wave .70s ease-in-out -.13s infinite}
 .wb3 {animation:wave .65s ease-in-out -.26s infinite} .wb4 {animation:wave .80s ease-in-out -.39s infinite}
 .wb5 {animation:wave .62s ease-in-out -.52s infinite} .wb6 {animation:wave .75s ease-in-out -.65s infinite}
 .wb7 {animation:wave .68s ease-in-out -.78s infinite} .wb8 {animation:wave .70s ease-in-out -.91s infinite}
 .wb9 {animation:wave .63s ease-in-out -1.04s infinite} .wb10{animation:wave .72s ease-in-out -1.17s infinite}
 .wb11{animation:wave .66s ease-in-out -1.30s infinite} .wb12{animation:wave .69s ease-in-out -1.43s infinite}
-
-.caption-card { padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); font-size: 13px; line-height: 1.5; color: var(--fg-3); text-wrap: pretty; }
-.caption-label { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: .14em; color: var(--fg-5); display: block; margin-bottom: 4px; }
-.agent-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-.ctrl-btn { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--border-mid); background: var(--surface2); color: var(--fg-2); transition: all .15s; }
-.ctrl-btn:hover { background: #222224; border-color: rgba(255,255,255,.2); }
-.ctrl-btn.end { border: none; background: #dc2626; color: #fff; }
-.ctrl-btn.end:hover { background: #ef4444; }
 
 /* ── responsive ── */
 @media (max-width: 1100px) {
@@ -386,6 +466,12 @@ textarea::placeholder { color: var(--fg-5); }
     <!-- ── left: chat ── -->
     <aside class="chat-sidebar">
       <div class="messages" id="messages">
+
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 2px;margin-bottom:2px">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--fg-5);white-space:nowrap">berylize-node · us-east1-c · L4 GPU</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
 
         <div class="msg me">
           <div class="msg-meta"><span>YOU</span><span>· VOICE</span></div>
@@ -463,8 +549,18 @@ textarea::placeholder { color: var(--fg-5); }
 
       <div class="preview-frame">
 
-        <!-- PREVIEW TAB -->
-        <div class="crane-preview" id="previewPane">
+        <!-- IDLE STATE (default) -->
+        <div class="idle-state" id="idlePane">
+          <div class="idle-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </div>
+          <div class="idle-title">No active build</div>
+          <div class="idle-sub">Describe your project in the chat or tap the mic. The preview will appear here as Beryl builds it.</div>
+          <div class="idle-pulse"></div>
+        </div>
+
+        <!-- PREVIEW TAB (shown when building) -->
+        <div class="crane-preview" id="previewPane" hidden>
 
           <!-- hero -->
           <div class="crane-hero">
@@ -612,65 +708,95 @@ textarea::placeholder { color: var(--fg-5); }
       </div><!-- /preview-frame -->
     </main>
 
-    <!-- ── right: agent ── -->
+    <!-- ── right: voice agent ── -->
     <aside class="agent-sidebar">
+
+      <!-- photo card with voice UI overlaid -->
       <div class="agent-card">
-        <img src="uploads/beryl.jpeg" alt="Beryl — Build Agent">
+        <img src="uploads/beryl.jpeg" alt="Beryl — Voice Agent">
         <div class="agent-card-overlay"></div>
+
         <div class="live-badge-pill">
-          <span class="live-dot"></span>LIVE
+          <span class="live-dot"></span>VOICE · LIVE
         </div>
-        <div class="agent-info">
-          <div class="agent-wave">
-            <span class="wave-bar wb1"></span><span class="wave-bar wb2"></span>
-            <span class="wave-bar wb3"></span><span class="wave-bar wb4"></span>
-            <span class="wave-bar wb5"></span><span class="wave-bar wb6"></span>
-            <span class="wave-bar wb7"></span><span class="wave-bar wb8"></span>
-            <span class="wave-bar wb9"></span><span class="wave-bar wb10"></span>
-            <span class="wave-bar wb11"></span><span class="wave-bar wb12"></span>
+
+        <div class="voice-overlay">
+          <div class="agent-name-row">
+            <div>
+              <div class="agent-name">Beryl</div>
+              <div class="agent-role">BUILD AGENT · BERYL LABS</div>
+            </div>
           </div>
-          <div class="agent-name">Beryl</div>
-          <div class="agent-role">BUILD AGENT · BERYL LABS</div>
+
+          <!-- oscilloscope waveform -->
+          <div class="voice-canvas-wrap">
+            <div class="voice-canvas-label">
+              <span class="voice-state-text" id="voiceStateLabel">LISTENING</span>
+              <span class="voice-model-text">berylize-7b · us-east1-c</span>
+            </div>
+            <canvas id="voiceCanvas" height="44"></canvas>
+          </div>
+
+          <!-- call controls -->
+          <div class="agent-controls">
+            <button class="ctrl-btn active-mic" id="agentMicBtn" title="Mic" onclick="toggleMic()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></svg>
+            </button>
+            <button class="ctrl-btn" title="Mute speaker" id="speakerBtn" onclick="toggleSpeaker()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            </button>
+            <button class="ctrl-btn" title="Share screen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            </button>
+            <button class="ctrl-btn end" title="End call" onclick="endCall()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="caption-card">
-        <span class="caption-label">SAYING</span>
-        "Stats strip and services are live. Want me to wire up the contact form next, or should we move straight to deploy?"
+      <!-- live transcript -->
+      <div class="transcript-strip">
+        <span class="transcript-label">TRANSCRIPT</span>
+        <span id="transcriptText">"Stats strip and services are live. Want me to wire up the contact form next, or should we move straight to deploy?"</span><span class="transcript-cursor" id="transcriptCursor"></span>
       </div>
 
-      <div class="agent-controls">
-        <button class="ctrl-btn" id="agentMicBtn" title="Mic" onclick="toggleMic()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></svg>
-        </button>
-        <button class="ctrl-btn" title="Camera">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
-        </button>
-        <button class="ctrl-btn" title="Share screen">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-        </button>
-        <button class="ctrl-btn end" title="End">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-        </button>
-      </div>
     </aside>
 
   </div><!-- /body-grid -->
 </div><!-- /app -->
 
 <script>
-/* ── tab switching ── */
+/* ── build state ── */
+let isBuilding = false;
+
 function setTab(t) {
+  const idle    = document.getElementById('idlePane');
   const preview = document.getElementById('previewPane');
   const code    = document.getElementById('codePane');
   const btns    = document.querySelectorAll('.tab');
   if (t === 'preview') {
-    preview.hidden = false; code.hidden = true;
+    idle.hidden    = isBuilding ? true : false;
+    preview.hidden = isBuilding ? false : true;
+    code.hidden    = true;
     btns[0].className = 'tab active'; btns[1].className = 'tab inactive';
   } else {
-    preview.hidden = true; code.hidden = false;
+    idle.hidden    = true;
+    preview.hidden = true;
+    code.hidden    = false;
     btns[0].className = 'tab inactive'; btns[1].className = 'tab active';
   }
+}
+
+function activateBuild() {
+  if (isBuilding) return;
+  isBuilding = true;
+  const idle    = document.getElementById('idlePane');
+  const preview = document.getElementById('previewPane');
+  const code    = document.getElementById('codePane');
+  if (!code.hidden) return; // in code tab, no change needed
+  idle.hidden    = true;
+  preview.hidden = false;
 }
 
 /* ── headline slider ── */
@@ -694,17 +820,49 @@ function nextSlide() {
 setInterval(nextSlide, 3200);
 
 /* ── mic toggle ── */
-let micOn = false;
+let micOn = true; // voice agent starts active
 function toggleMic() {
   micOn = !micOn;
   const m = document.getElementById('micBtn');
   const a = document.getElementById('agentMicBtn');
   const c = document.getElementById('composer');
-  const on  = { background: '#eeca50', color: '#1a1204', borderColor: 'rgba(255,236,170,.6)' };
-  const off = { background: '',        color: '',         borderColor: '' };
-  const v = micOn ? on : off;
-  Object.assign(m.style, v); Object.assign(a.style, v);
+  if (m) {
+    m.style.background  = micOn ? '#eeca50' : '';
+    m.style.color       = micOn ? '#1a1204' : '';
+    m.style.borderColor = micOn ? 'rgba(255,236,170,.6)' : '';
+  }
+  if (a) {
+    a.className = micOn ? 'ctrl-btn active-mic' : 'ctrl-btn';
+  }
   c.style.borderColor = micOn ? 'rgba(238,202,80,.5)' : '';
+  voiceState = micOn ? 'listening' : 'muted';
+  updateVoiceLabel();
+}
+
+let speakerOn = true;
+function toggleSpeaker() {
+  speakerOn = !speakerOn;
+  const s = document.getElementById('speakerBtn');
+  if (s) s.className = speakerOn ? 'ctrl-btn' : 'ctrl-btn active-mic';
+  voiceState = speakerOn ? (micOn ? 'listening' : 'muted') : 'speaker-off';
+  updateVoiceLabel();
+}
+
+function endCall() {
+  micOn = false; speakerOn = true;
+  voiceState = 'idle';
+  const a = document.getElementById('agentMicBtn');
+  if (a) a.className = 'ctrl-btn';
+  const m = document.getElementById('micBtn');
+  if (m) { m.style.background=''; m.style.color=''; m.style.borderColor=''; }
+  document.getElementById('voiceStateLabel').textContent = 'IDLE';
+  document.getElementById('transcriptCursor').hidden = true;
+}
+
+function updateVoiceLabel() {
+  const labels = { listening:'LISTENING', muted:'MUTED', speaking:'SPEAKING', 'speaker-off':'SPEAKER OFF', idle:'IDLE' };
+  const el = document.getElementById('voiceStateLabel');
+  if (el) { el.textContent = labels[voiceState] || voiceState.toUpperCase(); el.style.color = voiceState === 'muted' ? 'var(--fg-5)' : 'var(--gold)'; }
 }
 
 /* ── send message ── */
@@ -715,12 +873,18 @@ function sendMsg() {
   const via = micOn ? 'VOICE' : 'TEXT';
   addMsg(text, 'me', via);
   input.value = '';
-  if (micOn) toggleMic();
-  setTimeout(() => addMsg(
-    'Got it — building that now. Watch the preview.',
-    'bot', '',
-    [['●','Editing src/App.tsx','var(--gold)']]
-  ), 700);
+  if (!isBuilding) {
+    setTimeout(() => {
+      addMsg('On it — scaffolding now. Watch the preview.', 'bot', '', [['●','Starting build','var(--gold)']]);
+      setTimeout(activateBuild, 1200);
+    }, 600);
+  } else {
+    setTimeout(() => addMsg(
+      'Got it — building that now. Watch the preview.',
+      'bot', '',
+      [['●','Editing src/App.tsx','var(--gold)']]
+    ), 700);
+  }
 }
 document.getElementById('draftInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
@@ -747,4 +911,111 @@ setInterval(() => {
   const el = document.getElementById('tps');
   if (el) el.textContent = tps.toFixed(0);
 }, 400);
+
+/* ── oscilloscope waveform ── */
+let voiceState = 'listening'; // listening | speaking | muted | idle
+const canvas  = document.getElementById('voiceCanvas');
+const ctx2d   = canvas ? canvas.getContext('2d') : null;
+
+function resizeCanvas() {
+  if (!canvas) return;
+  canvas.width  = canvas.offsetWidth  * devicePixelRatio;
+  canvas.height = canvas.offsetHeight * devicePixelRatio;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// simulated voice amplitude envelope
+let phase = 0, ampTarget = 0.7, amp = 0.7;
+let speakTimer = 0;
+
+function drawWave() {
+  if (!ctx2d || !canvas) return;
+  const W = canvas.width, H = canvas.height;
+  const midY = H / 2;
+
+  ctx2d.clearRect(0, 0, W, H);
+
+  if (voiceState === 'muted' || voiceState === 'idle') {
+    // flat line
+    ctx2d.beginPath();
+    ctx2d.moveTo(0, midY);
+    ctx2d.lineTo(W, midY);
+    ctx2d.strokeStyle = 'rgba(255,255,255,.15)';
+    ctx2d.lineWidth = 1.5;
+    ctx2d.stroke();
+    return;
+  }
+
+  // drift amplitude
+  speakTimer++;
+  if (speakTimer % 80 === 0) ampTarget = 0.2 + Math.random() * 0.75;
+  amp += (ampTarget - amp) * 0.04;
+  if (voiceState === 'speaking') amp = Math.max(amp, 0.35);
+
+  const gold   = voiceState === 'speaking' ? 'rgba(238,202,80,' : 'rgba(160,210,255,';
+  const points = 180;
+  phase += voiceState === 'speaking' ? 0.09 : 0.05;
+
+  ctx2d.beginPath();
+  for (let i = 0; i <= points; i++) {
+    const x = (i / points) * W;
+    const f1 = Math.sin(phase + i * 0.11) * amp;
+    const f2 = Math.sin(phase * 1.3 + i * 0.23) * amp * 0.4;
+    const f3 = Math.sin(phase * 0.7 + i * 0.38) * amp * 0.2;
+    const y  = midY + (f1 + f2 + f3) * (H * 0.38);
+    i === 0 ? ctx2d.moveTo(x, y) : ctx2d.lineTo(x, y);
+  }
+  ctx2d.strokeStyle = gold + '0.9)';
+  ctx2d.lineWidth   = 1.5 * devicePixelRatio;
+  ctx2d.shadowColor = gold + '0.5)';
+  ctx2d.shadowBlur  = 6;
+  ctx2d.stroke();
+  ctx2d.shadowBlur  = 0;
+
+  requestAnimationFrame(drawWave);
+}
+drawWave();
+
+// cycle speaking / listening for demo
+let voiceCycleT = 0;
+setInterval(() => {
+  if (voiceState === 'muted' || voiceState === 'idle') return;
+  voiceCycleT++;
+  if (voiceCycleT % 14 === 0) {
+    voiceState = voiceState === 'listening' ? 'speaking' : 'listening';
+    updateVoiceLabel();
+    if (voiceState === 'listening') requestAnimationFrame(drawWave);
+  }
+}, 500);
+
+/* ── typewriter transcript ── */
+const LINES = [
+  '"Stats strip and services are live. Want me to wire up the contact form next, or should we move straight to deploy?"',
+  '"Pulling your design tokens now — gold gradient, Geist typefaces, zinc surface. Scaffolding."',
+  '"Hero looks clean. I added the slide animation on the headline. Want the dots smaller?"',
+  '"Done. Four service cards, consistent border radius, gold icon tint. Preview is live."',
+];
+let lineIdx = 0, charIdx = 0, typing = false;
+const transcriptEl = document.getElementById('transcriptText');
+const cursorEl     = document.getElementById('transcriptCursor');
+
+function typeNext() {
+  if (!transcriptEl) return;
+  const line = LINES[lineIdx];
+  if (charIdx < line.length) {
+    transcriptEl.textContent = line.slice(0, ++charIdx);
+    setTimeout(typeNext, 18 + Math.random() * 22);
+  } else {
+    typing = false;
+    setTimeout(() => {
+      lineIdx  = (lineIdx + 1) % LINES.length;
+      charIdx  = 0;
+      typing   = true;
+      transcriptEl.textContent = '';
+      typeNext();
+    }, 5000);
+  }
+}
+setTimeout(() => { typing = true; typeNext(); }, 2000);
 </script>
